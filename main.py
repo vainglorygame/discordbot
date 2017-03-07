@@ -55,6 +55,7 @@ async def on_ready():
 
 @bot.event
 async def on_command_error(error, ctx):
+    logging.error(error)
     if ctx.invoked_subcommand:
         pages = bot.formatter.format_help_for(
             ctx, ctx.invoked_subcommand)
@@ -83,12 +84,12 @@ async def vainsocial(region: str, name: str):
     participant.hero, participant.winner,
     participant.kills, participant.deaths, participant.assists, participant.farm, 
     participant.skill_tier, player.played, player.wins,
-    player.last_match_created_date
+    player.last_match_created_date::text
     FROM match, roster, participant, player where
       match.api_id=roster.match_api_id AND
       roster.api_id=participant.roster_api_id AND
       participant.player_api_id=player.api_id AND
-      player.name=$1 AND player.last_match_created_date<>$2
+      player.name=$1 AND player.last_match_created_date::text<>$2
     ORDER BY match.created_at DESC
     LIMIT 1
     """
