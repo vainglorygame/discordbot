@@ -150,7 +150,8 @@ Last match: %s %s as %s %s/%s/%s
             }
         }
         jobid = await queue.request(jobtype="grab",
-                                    payload=payload)
+                                    payload=payload,
+                                    priority=1)
 
         while True:
             # wait for grab job to finish
