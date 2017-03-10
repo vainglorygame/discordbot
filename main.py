@@ -80,7 +80,9 @@ async def vainsocial(region: str, name: str):
     query = """
     SELECT
     player.name,
+    player.shard_id,
     match.game_mode,
+    roster.match_api_id,
     participant.hero, participant.winner,
     participant.kills, participant.deaths, participant.assists, participant.farm, 
     participant.skill_tier, player.played, player.wins,
@@ -93,13 +95,15 @@ async def vainsocial(region: str, name: str):
     ORDER BY match.created_at DESC
     LIMIT 1
     """
-    def msg(dct):
+    def emb(dct):
+        data = dict(dct)
+
         tiers = ["Just Beginning", "Getting There", "Rock Solid", "Got Swagger", "Credible Threat", "The Hotness", "Simply Amazing", "Pinnacle Of Awesome", "Vainglorious"]
         if data["skill_tier"] == -1:
-            tier = "Unranked"
+            data["tier"] = "Unranked"
         else:
             subtiers = ["Bronze", "Silver", "Gold"]
-            tier = tiers[data["skill_tier"]//3-1] + " " + subtiers[data["skill_tier"]%3]
+            data["tier"] = tiers[data["skill_tier"]//3-1] + " " + subtiers[data["skill_tier"] % 3]
         modes = {
             "blitz_pvp_ranked": "Blitz",
             "casual_aral": "Battle Royale",
@@ -108,25 +112,30 @@ async def vainsocial(region: str, name: str):
             "private_party_blitz_match": "private Blitz",
             "private_party_aral_match": "private Battle Royale"
         }
-        mode = modes.get(data["game_mode"]) or data["game_mode"]
+        data["mode"] = modes.get(data["game_mode"]) or data["game_mode"]
         heroes = {
             "Sayoc": "Taka",
             "Hero009": "Krul",
             "Hero010": "Skaarf",
             "Hero016": "Rona"
         }
-        hero = heroes.get(data["hero"]) or data["hero"].replace("*", "")
+        data["hero"] = data["hero"].replace("*", "")
+        data["hero"] = heroes.get(data["hero"]) or data["hero"]
+        data["result"] = "won" if data["winner"] else "lost"
 
-        return ("""
-%s: %s, %s wins / %s games
-Last match: %s %s as %s %s/%s/%s
-""") % (
-            data["name"], tier,
-            data["wins"], data["played"],
-            ("won" if data["winner"] else "lost"),
-            mode, hero,
-            data["kills"], data["deaths"], data["assists"]
+        emb = discord.Embed(
+            title="%(name)s" % data,
+            url="https://alpha.vainsocial.com/players/%(shard_id)s/%(name)s" % data
         )
+        emb.set_author(name="Vainsocial",
+                       url="https://alpha.vainsocial.com")
+        emb.add_field(name="Stats",
+                      value="%(tier)s, %(wins)i wins / %(played)i games" % data)
+        emb.add_field(name="Last match",
+                      value="%(result)s %(mode)s as %(hero)s %(kills)i/%(deaths)i/%(assists)i" % data)
+        emb.set_footer(text="Vainsocial - Vainglory social stats service")
+        #emb.set_thumbnail(url="https://cdn.discordapp.com/attachments/287307371074813954/289865664187858944/0.png")
+        return emb
 
     async with pool.acquire() as con:
         await bot.type()
@@ -140,7 +149,9 @@ Last match: %s %s as %s %s/%s/%s
         else:
             in_cache = True  # returning user
             lmcd = data["last_match_created_date"]
-            msgid = await bot.say(msg(data))
+            msgid = await bot.say(embed=emb(data))
+
+        logging.info("'%s' cached: %s", name, in_cache)
 
         payload = {
             "region": region,
@@ -161,7 +172,7 @@ Last match: %s %s as %s %s/%s/%s
             if status == 'failed':
                 logging.warning("'%s': not found", name)
                 if not in_cache:
-                    await bot.edit_message(
+                    await bot.edit_message(msgid,
                         "Could not find you.")
                 return
             asyncio.sleep(0.5)
@@ -173,7 +184,7 @@ Last match: %s %s as %s %s/%s/%s
                 break
             asyncio.sleep(0.5)
 
-        await bot.edit_message(msgid, msg(data))
+        await bot.edit_message(msgid, embed=emb(data))
 
 
 logging.basicConfig(level=logging.INFO)
