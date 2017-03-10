@@ -149,9 +149,9 @@ Last match: %s %s as %s %s/%s/%s
                 "filter[playerNames]": name
             }
         }
-        jobid = await queue.request(jobtype="grab",
-                                    payload=payload,
-                                    priority=1)
+        jobid = (await queue.request(jobtype="grab",
+                                     payload=[payload],
+                                     priority=[1]))[0]
 
         while True:
             # wait for grab job to finish
@@ -159,18 +159,19 @@ Last match: %s %s as %s %s/%s/%s
             if status == 'finished':
                 break
             if status == 'failed':
+                logging.warning("'%s': not found", name)
                 if not in_cache:
                     await bot.edit_message(
                         "Could not find you.")
                 return
-            asyncio.sleep(0.1)
+            asyncio.sleep(0.5)
 
         while True:
             # wait for processor to update the player
             data = await con.fetchrow(query, name, lmcd)
             if data is not None:
                 break
-            asyncio.sleep(0.1)
+            asyncio.sleep(0.5)
 
         await bot.edit_message(msgid, msg(data))
 
