@@ -98,12 +98,12 @@ async def vainsocial(region: str, name: str):
     def emb(dct):
         data = dict(dct)
 
-        tiers = ["Just Beginning", "Getting There", "Rock Solid", "Got Swagger", "Credible Threat", "The Hotness", "Simply Amazing", "Pinnacle Of Awesome", "Vainglorious"]
+        tiers = ["Just Beginning", "Getting There", "Rock Solid", "Worthy Foe", "Got Swagger", "Credible Threat", "The Hotness", "Simply Amazing", "Pinnacle Of Awesome", "Vainglorious"]
         if data["skill_tier"] == -1:
             data["tier"] = "Unranked"
         else:
             subtiers = ["Bronze", "Silver", "Gold"]
-            data["tier"] = tiers[data["skill_tier"]//3-1] + " " + subtiers[data["skill_tier"] % 3]
+            data["tier"] = tiers[data["skill_tier"]//3] + " " + subtiers[data["skill_tier"] % 3]
         modes = {
             "blitz_pvp_ranked": "Blitz",
             "casual_aral": "Battle Royale",
