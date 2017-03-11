@@ -26,7 +26,7 @@ dest_db = {
 
 
 bot = commands.Bot(
-    command_prefix="!",
+    command_prefix="?",
     description="Vainsocial Vainglory stats bot")
 
 queue = None
@@ -101,9 +101,12 @@ async def vainsocial(region: str, name: str):
         tiers = ["Just Beginning", "Getting There", "Rock Solid", "Worthy Foe", "Got Swagger", "Credible Threat", "The Hotness", "Simply Amazing", "Pinnacle Of Awesome", "Vainglorious"]
         if data["skill_tier"] == -1:
             data["tier"] = "Unranked"
+            data["tier_num"] = "unranked"
         else:
             subtiers = ["Bronze", "Silver", "Gold"]
             data["tier"] = tiers[data["skill_tier"]//3] + " " + subtiers[data["skill_tier"] % 3]
+            data["tier_num"] = data["skill_tier"]
+
         modes = {
             "blitz_pvp_ranked": "Blitz",
             "casual_aral": "Battle Royale",
@@ -134,7 +137,7 @@ async def vainsocial(region: str, name: str):
         emb.add_field(name="Last match",
                       value="%(result)s %(mode)s as %(hero)s %(kills)i/%(deaths)i/%(assists)i" % data)
         emb.set_footer(text="Vainsocial - Vainglory social stats service")
-        #emb.set_thumbnail(url="https://cdn.discordapp.com/attachments/287307371074813954/289865664187858944/0.png")
+        emb.set_thumbnail(url="https://alpha.vainsocial.com/images/game/skill_tiers/%(tier_num)s.png" % data)
         return emb
 
     async with pool.acquire() as con:
