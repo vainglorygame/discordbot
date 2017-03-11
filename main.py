@@ -26,7 +26,7 @@ dest_db = {
 
 
 bot = commands.Bot(
-    command_prefix="?",
+    command_prefix="!",
     description="Vainsocial Vainglory stats bot")
 
 queue = None
