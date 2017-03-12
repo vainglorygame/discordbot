@@ -115,7 +115,8 @@ async def vainsocial(region: str, name: str):
             "Hero010": "Skaarf",
             "Hero016": "Rona"
         }
-        hero = heroes.get(data["hero"]) or data["hero"].replace("*", "")
+        data["hero"].replace("*", "")
+        hero = heroes.get(data["hero"]) or data["hero"]
 
         return ("""
 %s: %s, %s wins / %s games
