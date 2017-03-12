@@ -41,7 +41,8 @@ async def connect(queuedb, db):
     await queue.setup()
 
     global pool
-    pool = await asyncpg.create_pool(**db)
+    pool = await asyncpg.create_pool(
+        min_size=1, **db)
 
 
 @bot.event
@@ -51,6 +52,9 @@ async def on_ready():
                     "client_id=%s&scope=bot)",
                     bot.user.name, bot.user.id)
     await connect(source_db, dest_db)
+    await bot.change_presence(
+        game=discord.Game(
+            name="alpha.vainsocial.com"))
 
 
 @bot.event
@@ -80,7 +84,9 @@ async def vainsocial(region: str, name: str):
     query = """
     SELECT
     player.name,
+    player.shard_id,
     match.game_mode,
+    roster.match_api_id,
     participant.hero, participant.winner,
     participant.kills, participant.deaths, participant.assists, participant.farm, 
     participant.skill_tier, player.played, player.wins,
@@ -93,13 +99,18 @@ async def vainsocial(region: str, name: str):
     ORDER BY match.created_at DESC
     LIMIT 1
     """
-    def msg(dct):
-        tiers = ["Just Beginning", "Getting There", "Rock Solid", "Got Swagger", "Credible Threat", "The Hotness", "Simply Amazing", "Pinnacle Of Awesome", "Vainglorious"]
+    def emb(dct):
+        data = dict(dct)
+
+        tiers = ["Just Beginning", "Getting There", "Rock Solid", "Worthy Foe", "Got Swagger", "Credible Threat", "The Hotness", "Simply Amazing", "Pinnacle Of Awesome", "Vainglorious"]
         if data["skill_tier"] == -1:
-            tier = "Unranked"
+            data["tier"] = "Unranked"
+            data["tier_num"] = "unranked"
         else:
             subtiers = ["Bronze", "Silver", "Gold"]
-            tier = tiers[data["skill_tier"]//3-1] + " " + subtiers[data["skill_tier"]%3]
+            data["tier"] = tiers[data["skill_tier"]//3] + " " + subtiers[data["skill_tier"] % 3]
+            data["tier_num"] = data["skill_tier"]
+
         modes = {
             "blitz_pvp_ranked": "Blitz",
             "casual_aral": "Battle Royale",
@@ -108,26 +119,30 @@ async def vainsocial(region: str, name: str):
             "private_party_blitz_match": "private Blitz",
             "private_party_aral_match": "private Battle Royale"
         }
-        mode = modes.get(data["game_mode"]) or data["game_mode"]
+        data["mode"] = modes.get(data["game_mode"]) or data["game_mode"]
         heroes = {
             "Sayoc": "Taka",
             "Hero009": "Krul",
             "Hero010": "Skaarf",
             "Hero016": "Rona"
         }
-        data["hero"].replace("*", "")
-        hero = heroes.get(data["hero"]) or data["hero"]
+        data["hero"] = data["hero"].replace("*", "")
+        data["hero"] = heroes.get(data["hero"]) or data["hero"]
+        data["result"] = "won" if data["winner"] else "lost"
 
-        return ("""
-%s: %s, %s wins / %s games
-Last match: %s %s as %s %s/%s/%s
-""") % (
-            data["name"], tier,
-            data["wins"], data["played"],
-            ("won" if data["winner"] else "lost"),
-            mode, hero,
-            data["kills"], data["deaths"], data["assists"]
+        emb = discord.Embed(
+            title="%(name)s" % data,
+            url="https://alpha.vainsocial.com/players/%(shard_id)s/%(name)s" % data
         )
+        emb.set_author(name="Vainsocial",
+                       url="https://alpha.vainsocial.com")
+        emb.add_field(name="Stats",
+                      value="%(tier)s, %(wins)i wins / %(played)i games" % data)
+        emb.add_field(name="Last match",
+                      value="%(result)s %(mode)s as %(hero)s %(kills)i/%(deaths)i/%(assists)i" % data)
+        emb.set_footer(text="Vainsocial - Vainglory social stats service")
+        emb.set_thumbnail(url="https://alpha.vainsocial.com/images/game/skill_tiers/%(tier_num)s.png" % data)
+        return emb
 
     async with pool.acquire() as con:
         await bot.type()
@@ -141,7 +156,9 @@ Last match: %s %s as %s %s/%s/%s
         else:
             in_cache = True  # returning user
             lmcd = data["last_match_created_date"]
-            msgid = await bot.say(msg(data))
+            msgid = await bot.say(embed=emb(data))
+
+        logging.info("'%s' cached: %s", name, in_cache)
 
         payload = {
             "region": region,
@@ -150,9 +167,9 @@ Last match: %s %s as %s %s/%s/%s
                 "filter[playerNames]": name
             }
         }
-        jobid = await queue.request(jobtype="grab",
-                                    payload=payload,
-                                    priority=1)
+        jobid = (await queue.request(jobtype="grab",
+                                     payload=[payload],
+                                     priority=[1]))[0]
 
         while True:
             # wait for grab job to finish
@@ -160,20 +177,21 @@ Last match: %s %s as %s %s/%s/%s
             if status == 'finished':
                 break
             if status == 'failed':
+                logging.warning("'%s': not found", name)
                 if not in_cache:
-                    await bot.edit_message(
+                    await bot.edit_message(msgid,
                         "Could not find you.")
                 return
-            asyncio.sleep(0.1)
+            asyncio.sleep(0.5)
 
         while True:
             # wait for processor to update the player
             data = await con.fetchrow(query, name, lmcd)
             if data is not None:
                 break
-            asyncio.sleep(0.1)
+            asyncio.sleep(0.5)
 
-        await bot.edit_message(msgid, msg(data))
+        await bot.edit_message(msgid, embed=emb(data))
 
 
 logging.basicConfig(level=logging.INFO)
