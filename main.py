@@ -52,6 +52,9 @@ async def on_ready():
                     "client_id=%s&scope=bot)",
                     bot.user.name, bot.user.id)
     await connect(source_db, dest_db)
+    await bot.change_presence(
+        game=discord.Game(
+            name="alpha.vainsocial.com"))
 
 
 @bot.event
