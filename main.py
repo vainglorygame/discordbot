@@ -41,7 +41,8 @@ async def connect(queuedb, db):
     await queue.setup()
 
     global pool
-    pool = await asyncpg.create_pool(**db)
+    pool = await asyncpg.create_pool(
+        min_size=1, **db)
 
 
 @bot.event
