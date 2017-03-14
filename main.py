@@ -57,7 +57,7 @@ async def on_ready():
             name="alpha.vainsocial.com"))
 
 
-@bot.command()
+@bot.command(aliases=["v", "vain"])
 async def vainsocial(name: str, region: str = None):
     """Retrieves a player's stats."""
     query = """
