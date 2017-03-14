@@ -75,7 +75,7 @@ async def on_command_error(error, ctx):
 
 
 @bot.command()
-async def vainsocial(region: str, name: str):
+async def vainsocial(name: str, region: str):
     """Retrieves a player's stats."""
     region = region.lower()
     if region not in ["na", "eu", "sg", "ea", "sa"]:
