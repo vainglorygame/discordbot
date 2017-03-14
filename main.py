@@ -57,31 +57,9 @@ async def on_ready():
             name="alpha.vainsocial.com"))
 
 
-@bot.event
-async def on_command_error(error, ctx):
-    logging.error(error)
-    if ctx.invoked_subcommand:
-        pages = bot.formatter.format_help_for(
-            ctx, ctx.invoked_subcommand)
-        for page in pages:
-            await bot.send_message(
-                ctx.message.channel, page)
-    else:
-        pages = bot.formatter.format_help_for(
-            ctx, ctx.command)
-        for page in pages:
-            await bot.send_message(
-                ctx.message.channel, page)
-
-
 @bot.command()
-async def vainsocial(name: str, region: str):
+async def vainsocial(name: str, region: str = None):
     """Retrieves a player's stats."""
-    region = region.lower()
-    if region not in ["na", "eu", "sg", "ea", "sa"]:
-        await bot.say("That region is not supported.")
-        return
-
     query = """
     SELECT
     player.name,
@@ -152,6 +130,20 @@ async def vainsocial(name: str, region: str):
             in_cache = True  # returning user
             lmcd = data["last_match_created_date"]
             msgid = await bot.say(embed=emb(data))
+
+        if not in_cache:
+            if region is None:
+                await bot.edit_message(msgid,
+                    "Can't find you. What is your region?")
+                return
+            region = region.lower()
+            if region not in ["na", "eu", "sg", "ea", "sa"]:
+                await bot.edit_message(msgid,
+                    "That region is not supported.")
+                return
+        else:
+            if region is None:
+                region = data["shard_id"]
 
         logging.info("'%s' cached: %s", name, in_cache)
 
