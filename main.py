@@ -90,7 +90,7 @@ async def vainsocial(region: str, name: str):
     roster.match_api_id,
     participant.hero, participant.winner,
     participant.kills, participant.deaths, participant.assists, participant.farm, 
-    participant.skill_tier, player.played, player.wins,
+    player.skill_tier, player.played, player.wins,
     player.last_match_created_date::text
     FROM match, roster, participant, player where
       match.api_id=roster.match_api_id AND
@@ -102,15 +102,6 @@ async def vainsocial(region: str, name: str):
     """
     def emb(dct):
         data = dict(dct)
-
-        tiers = ["Just Beginning", "Getting There", "Rock Solid", "Worthy Foe", "Got Swagger", "Credible Threat", "The Hotness", "Simply Amazing", "Pinnacle Of Awesome", "Vainglorious"]
-        if data["skill_tier"] == -1:
-            data["tier"] = "Unranked"
-            data["tier_num"] = "unranked"
-        else:
-            subtiers = ["Bronze", "Silver", "Gold"]
-            data["tier"] = tiers[data["skill_tier"]//3] + " " + subtiers[data["skill_tier"] % 3]
-            data["tier_num"] = data["skill_tier"]
 
         modes = {
             "blitz_pvp_ranked": "Blitz",
@@ -138,11 +129,11 @@ async def vainsocial(region: str, name: str):
         emb.set_author(name="Vainsocial",
                        url="https://alpha.vainsocial.com")
         emb.add_field(name="Stats",
-                      value="%(tier)s, %(wins)i wins / %(played)i games" % data)
+                      value="%(wins)i wins / %(played)i games" % data)
         emb.add_field(name="Last match",
                       value="%(result)s %(mode)s as %(hero)s %(kills)i/%(deaths)i/%(assists)i" % data)
         emb.set_footer(text="Vainsocial - Vainglory social stats service")
-        emb.set_thumbnail(url="https://alpha.vainsocial.com/images/game/skill_tiers/%(tier_num)s.png" % data)
+        emb.set_thumbnail(url="https://alpha.vainsocial.com/images/game/skill_tiers/%(skill_tier)s.png" % data)
         return emb
 
     async with pool.acquire() as con:
