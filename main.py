@@ -128,10 +128,13 @@ async def vainsocial(name: str, region: str):
         )
         emb.set_author(name="Vainsocial",
                        url="https://alpha.vainsocial.com")
-        emb.add_field(name="Stats",
-                      value="%(wins)i wins / %(played)i games" % data)
+        emb.add_field(name="Profile",
+                      value=("%(wins)i wins / %(played)i games\n" +
+                             "https://alpha.vainsocial.com/players/%(shard_id)s/%(name)s") % data)
         emb.add_field(name="Last match",
-                      value="%(result)s %(mode)s as %(hero)s %(kills)i/%(deaths)i/%(assists)i" % data)
+                      value=("%(result)s %(mode)s as %(hero)s %(kills)i/%(deaths)i/%(assists)i\n" +
+                             "https://alpha.vainsocial.com/matches/%(match_api_id)s") % data)
+
         emb.set_footer(text="Vainsocial - Vainglory social stats service")
         emb.set_thumbnail(url="https://alpha.vainsocial.com/images/game/skill_tiers/%(skill_tier)s.png" % data)
         return emb
