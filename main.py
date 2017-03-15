@@ -62,7 +62,7 @@ async def about():
     """Print invite links."""
     emb = discord.Embed(
         title="Vainsocial Discord bot",
-        description="Built by the Vainsocial development team using the MadGlory API."
+        description="Built by the Vainsocial development team using the MadGlory API. Currently running on %i servers." % (len(bot.servers),)
     )
     emb.add_field(name="Website",
                   value="https://alpha.vainsocial.com")
