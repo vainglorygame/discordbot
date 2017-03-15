@@ -155,6 +155,8 @@ async def vainsocial(name: str, region: str = None):
                     "Can't find you. What is your region?")
                 return
             region = region.lower()
+            if region == "sea":
+                region = "sg"
             if region not in ["na", "eu", "sg", "ea", "sa"]:
                 await bot.edit_message(msgid,
                     "That region is not supported.")
