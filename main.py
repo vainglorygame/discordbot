@@ -57,6 +57,24 @@ async def on_ready():
             name="alpha.vainsocial.com"))
 
 
+@bot.command()
+async def about():
+    """Print invite links."""
+    emb = discord.Embed(
+        title="Vainsocial Discord bot",
+        description="Built by the Vainsocial development team using the MadGlory API."
+    )
+    emb.add_field(name="Website",
+                  value="https://alpha.vainsocial.com")
+    emb.add_field(name="Bot invite link",
+                  value="https://discordapp.com/oauth2/authorize?&client_id=287297889024213003&scope=bot")
+    emb.add_field(name="Developer Discord",
+                  value="https://discord.gg/txTchJY")
+    emb.add_field(name="Twitter",
+                  value="https://twitter.com/vainsocial")
+    await bot.say(embed=emb)
+
+
 @bot.command(aliases=["v", "vain"])
 async def vainsocial(name: str, region: str = None):
     """Retrieves a player's stats."""
