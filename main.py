@@ -65,7 +65,7 @@ async def about():
         description="Built by the Vainsocial development team using the MadGlory API. Currently running on %i servers." % (len(bot.servers),)
     )
     emb.add_field(name="Website",
-                  value="https://alpha.vainsocial.com")
+                  value="https://alpha.vainsocial.com/?src=discordbot")
     emb.add_field(name="Bot invite link",
                   value="https://discordapp.com/oauth2/authorize?&client_id=287297889024213003&scope=bot")
     emb.add_field(name="Developer Discord",
@@ -120,16 +120,16 @@ async def vainsocial(name: str, region: str = None):
 
         emb = discord.Embed(
             title="%(name)s" % data,
-            url="https://alpha.vainsocial.com/players/%(shard_id)s/%(name)s" % data
+            url="https://alpha.vainsocial.com/players/%(shard_id)s/%(name)s/?src=discordbot" % data
         )
         emb.set_author(name="Vainsocial",
                        url="https://alpha.vainsocial.com")
         emb.add_field(name="Profile",
                       value=("%(wins)i wins / %(played)i games\n" +
-                             "https://alpha.vainsocial.com/players/%(shard_id)s/%(name)s") % data)
+                             "https://alpha.vainsocial.com/players/%(shard_id)s/%(name)s/?src=discordbot") % data)
         emb.add_field(name="Last match",
                       value=("%(result)s %(mode)s as %(hero)s %(kills)i/%(deaths)i/%(assists)i\n" +
-                             "https://alpha.vainsocial.com/matches/%(match_api_id)s") % data)
+                             "https://alpha.vainsocial.com/matches/%(match_api_id)s/?src=discordbot") % data)
 
         emb.set_footer(text="Vainsocial - Vainglory social stats service")
         emb.set_thumbnail(url="https://alpha.vainsocial.com/images/game/skill_tiers/%(skill_tier)s.png" % data)
