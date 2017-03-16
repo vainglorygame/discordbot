@@ -80,6 +80,8 @@ async def vainsocial(name: str, region: str = None):
     """Retrieves a player's stats."""
     query = """
     SELECT
+    participant_stats_scorelabels.label AS score_label,
+    ROUND((100*score)::NUMERIC, 0) AS score,
     player.name,
     player.shard_id,
     match.game_mode,
@@ -88,10 +90,14 @@ async def vainsocial(name: str, region: str = None):
     participant.kills, participant.deaths, participant.assists, participant.farm, 
     player.skill_tier, player.played, player.wins,
     player.last_match_created_date::text
-    FROM match, roster, participant, player where
+    FROM match, roster, participant, player, participant_stats, participant_stats_scorelabels WHERE
       match.api_id=roster.match_api_id AND
       roster.api_id=participant.roster_api_id AND
       participant.player_api_id=player.api_id AND
+      participant_stats.participant_api_id=participant.api_id AND
+      participant.winner=participant_stats_scorelabels.winner AND
+        participant_stats_scorelabels.lower <= participant_stats.score AND
+        participant_stats.score < participant_stats_scorelabels.upper AND
       player.name=$1 AND player.last_match_created_date::text<>$2
     ORDER BY match.created_at DESC
     LIMIT 1
@@ -128,7 +134,7 @@ async def vainsocial(name: str, region: str = None):
                       value=("%(wins)i wins / %(played)i games\n" +
                              "https://vainsocial.com/players/%(shard_id)s/%(name)s/?utm_source=discord&utm_medium=vainsocial") % data)
         emb.add_field(name="Last match",
-                      value=("%(result)s %(mode)s as %(hero)s %(kills)i/%(deaths)i/%(assists)i\n" +
+                      value=("%(result)s %(mode)s as %(hero)s %(kills)i/%(deaths)i/%(assists)i (%(score_label)s %(score)s%%))\n" +
                              "https://vainsocial.com/matches/%(match_api_id)s/?utm_source=discord&utm_medium=vainsocial") % data)
 
         emb.set_footer(text="Vainsocial - Vainglory social stats service")
