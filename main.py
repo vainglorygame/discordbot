@@ -134,7 +134,7 @@ async def vainsocial(name: str, region: str = None):
                       value=("%(wins)i wins / %(played)i games\n" +
                              "https://vainsocial.com/players/%(shard_id)s/%(name)s/?utm_source=discord&utm_medium=vainsocial") % data)
         emb.add_field(name="Last match",
-                      value=("%(result)s %(mode)s as %(hero)s %(kills)i/%(deaths)i/%(assists)i (%(score_label)s %(score)s%%))\n" +
+                      value=("%(result)s %(mode)s as %(hero)s %(kills)i/%(deaths)i/%(assists)i\n" +
                              "https://vainsocial.com/matches/%(match_api_id)s/?utm_source=discord&utm_medium=vainsocial") % data)
 
         emb.set_footer(text="Vainsocial - Vainglory social stats service")
