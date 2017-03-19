@@ -120,6 +120,7 @@ async def vainsocial(name: str, region: str = None):
 
         emb = discord.Embed(
             title="%(name)s" % data,
+            description="Last match registered (GMT): %(last_match_created_date)s" % data,
             url="https://alpha.vainsocial.com/players/%(shard_id)s/%(name)s/?utm_source=discord&utm_medium=vainsocial" % data
         )
         emb.set_author(name="Vainsocial",
