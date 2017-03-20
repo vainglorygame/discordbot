@@ -65,13 +65,13 @@ async def about():
         description="Built by the Vainsocial development team using the MadGlory API. Currently running on %i servers." % (len(bot.servers),)
     )
     emb.add_field(name="Website",
-                  value="https://alpha.vainsocial.com/?utm_source=discord&utm_medium=vainsocial")
+                  value="[vainsocial.com](https://alpha.vainsocial.com/?utm_source=discord&utm_medium=vainsocial)")
     emb.add_field(name="Bot invite link",
-                  value="https://discordapp.com/oauth2/authorize?&client_id=287297889024213003&scope=bot")
+                  value="[discordapp.com](https://discordapp.com/oauth2/authorize?&client_id=287297889024213003&scope=bot)")
     emb.add_field(name="Developer Discord",
-                  value="https://discord.gg/txTchJY")
+                  value="[txTchJY](https://discord.gg/txTchJY)")
     emb.add_field(name="Twitter",
-                  value="https://twitter.com/vainsocial")
+                  value="[twitter/vainsocial](https://twitter.com/vainsocial)")
     await bot.say(embed=emb)
 
 
@@ -127,10 +127,10 @@ async def vainsocial(name: str, region: str = None):
                        url="https://alpha.vainsocial.com")
         emb.add_field(name="Profile",
                       value=("%(wins)i wins / %(played)i games\n" +
-                             "https://alpha.vainsocial.com/players/%(shard_id)s/%(name)s/?utm_source=discord&utm_medium=vainsocial") % data)
+                             "[View on vainsocial.com](https://alpha.vainsocial.com/players/%(shard_id)s/%(name)s/?utm_source=discord&utm_medium=vainsocial)") % data)
         emb.add_field(name="Last match",
                       value=("%(result)s %(mode)s as %(hero)s %(kills)i/%(deaths)i/%(assists)i\n" +
-                             "https://alpha.vainsocial.com/matches/%(match_api_id)s/?utm_source=discord&utm_medium=vainsocial") % data)
+                             "[View on vainsocial.com](https://alpha.vainsocial.com/matches/%(match_api_id)s/?utm_source=discord&utm_medium=vainsocial)") % data)
 
         emb.set_footer(text="Vainsocial - Vainglory social stats service")
         emb.set_thumbnail(url="https://alpha.vainsocial.com/images/game/skill_tiers/%(skill_tier)s.png" % data)
