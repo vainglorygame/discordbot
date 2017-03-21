@@ -172,7 +172,8 @@ async def vainsocial(name: str, region: str = None):
             "region": region,
             "params": {
                 "filter[createdAt-start]": lmcd,
-                "filter[playerNames]": name
+                "filter[playerNames]": name,
+                "filter[gameMode]": "casual,ranked"
             }
         }
         jobid = (await queue.request(jobtype="grab",
