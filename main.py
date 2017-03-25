@@ -21,7 +21,7 @@ db = {
 TIMEOUT = 120  # s until giving up on API
 
 bot = commands.Bot(
-    command_prefix="?",
+    command_prefix="!",
     description="Vainsocial Vainglory stats bot")
 
 pool = None
