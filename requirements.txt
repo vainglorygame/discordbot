@@ -7,5 +7,8 @@ discord.py==0.16.7
 multidict==2.1.4
 packaging==16.8
 pyparsing==2.1.10
+requests==2.13.0
 six==1.10.0
+socketIO-client==0.7.2
+websocket-client==0.40.0
 websockets==3.2
