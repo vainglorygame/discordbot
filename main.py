@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# TODO one request blocks the whole event loop.
 
 import logging
 import os
@@ -150,8 +151,7 @@ async def vainsocial(name: str):
             # TODO here is the problem ^ don't work in closures :(
             if args[0] in ["process_finished", "compile_finished"]:
                 do_update = True
-            if args[0] in ["grab_failed", "process_finished",
-                           "compile_finished"]:
+            if args[0] == "done":
                 wait_for_update = False
 
         io = SocketIO("localhost", 8080, LoggingNamespace)
@@ -160,7 +160,7 @@ async def vainsocial(name: str):
         asyncio.ensure_future(request_update())
 
         has_embed = False
-        for _ in range(10):  # try for 10s
+        for _ in range(30):  # try for s
             if do_update:
                 logging.info("%s: updating bot response",
                              name)
@@ -175,6 +175,7 @@ async def vainsocial(name: str):
                                  name)
             if not wait_for_update:
                 break
+
             io.wait(seconds=1)
 
         if has_embed:
