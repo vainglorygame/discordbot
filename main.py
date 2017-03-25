@@ -2,21 +2,15 @@
 
 import logging
 import os
+import http
+import json
 import asyncio
 import asyncpg
 import discord
 from discord.ext import commands
-import joblib.joblib
+from socketIO_client import SocketIO, LoggingNamespace
 
-source_db = {
-    "host": os.environ.get("POSTGRESQL_SOURCE_HOST") or "localhost",
-    "port": os.environ.get("POSTGRESQL_SOURCE_PORT") or 5433,
-    "user": os.environ.get("POSTGRESQL_SOURCE_USER") or "vainraw",
-    "password": os.environ.get("POSTGRESQL_SOURCE_PASSWORD") or "vainraw",
-    "database": os.environ.get("POSTGRESQL_SOURCE_DB") or "vainsocial-raw"
-}
-
-dest_db = {
+db = {
     "host": os.environ.get("POSTGRESQL_DEST_HOST") or "localhost",
     "port": os.environ.get("POSTGRESQL_DEST_PORT") or 5432,
     "user": os.environ.get("POSTGRESQL_DEST_USER") or "vainweb",
@@ -26,23 +20,10 @@ dest_db = {
 
 
 bot = commands.Bot(
-    command_prefix="!",
+    command_prefix="?",
     description="Vainsocial Vainglory stats bot")
 
-queue = None
 pool = None
-
-async def connect(queuedb, db):
-    logging.warning("connecting to database")
-
-    global queue
-    queue = joblib.joblib.JobQueue()
-    await queue.connect(**queuedb)
-    await queue.setup()
-
-    global pool
-    pool = await asyncpg.create_pool(
-        min_size=1, **db)
 
 
 @bot.event
@@ -51,7 +32,10 @@ async def on_ready():
                     "https://discordapp.com/oauth2/authorize?&" +
                     "client_id=%s&scope=bot)",
                     bot.user.name, bot.user.id)
-    await connect(source_db, dest_db)
+    logging.warning("connecting to database")
+    global pool
+    pool = await asyncpg.create_pool(
+        min_size=2, **db)
     await bot.change_presence(
         game=discord.Game(
             name="vainsocial.com"))
@@ -76,7 +60,7 @@ async def about():
 
 
 @bot.command(aliases=["v", "vain"])
-async def vainsocial(name: str, region: str = None):
+async def vainsocial(name: str):
     """Retrieves a player's stats."""
     query = """
     SELECT
@@ -88,11 +72,11 @@ async def vainsocial(name: str, region: str = None):
     participant.kills, participant.deaths, participant.assists, participant.farm, 
     player.skill_tier, player.played, player.wins,
     player.last_match_created_date::text
-    FROM match, roster, participant, player where
+    FROM match, roster, participant, player WHERE
       match.api_id=roster.match_api_id AND
       roster.api_id=participant.roster_api_id AND
       participant.player_api_id=player.api_id AND
-      player.name=$1 AND player.last_match_created_date::text<>$2
+      player.name=$1
     ORDER BY match.created_at DESC
     LIMIT 1
     """
@@ -139,68 +123,63 @@ async def vainsocial(name: str, region: str = None):
     async with pool.acquire() as con:
         await bot.type()
 
-        data = await con.fetchrow(query, name, 'NULL')
-        if data is None:
-            in_cache = False  # new user
-            lmcd = "2017-02-01T00:00:00Z"
-            msgid = await bot.say(
-                "%s: please wait…" % name)
-        else:
-            in_cache = True  # returning user
-            lmcd = data["last_match_created_date"]
-            msgid = await bot.say(embed=emb(data))
+        bot_response = await bot.say("Loading…")
+        # TODO this is shitty. Shouldn't need globals to keep track of updates
+        # also, this is buggy.
+        # TODO: Use a Python-friendly alternative to socketio
+        global do_update, wait_for_update
+        wait_for_update = True  # continue polling
+        do_update = True  # poll immediately
 
-        if not in_cache:
-            if region is None:
-                await bot.edit_message(msgid,
-                    "Can't find you. What is your region?")
-                return
-            region = region.lower()
-            if region == "sea":
-                region = "sg"
-            if region not in ["na", "eu", "sg", "ea", "sa"]:
-                await bot.edit_message(msgid,
-                    "That region is not supported.")
-                return
-        else:
-            if region is None:
-                region = data["shard_id"]
+        async def request_update():
+            global wait_for_update
+            # request an update via Vainsocial API
+            api_con = http.client.HTTPConnection("localhost", 8080)
+            api_con.request("HEAD", "/api/player/name/" + name)
+            api_resp = api_con.getresponse()
+            logging.info("%s: API responded with status %i",
+                         name, api_resp.status)
+            if api_resp.status == 404:
+                wait_for_update = False
+                await bot.edit_message(bot_response,
+                                       "Could not find you.")
+            api_con.close()
 
-        logging.info("'%s' cached: %s", name, in_cache)
+        def update_available(*args):
+            global do_update, wait_for_update
+            # TODO here is the problem ^ don't work in closures :(
+            if args[0] in ["process_finished", "compile_finished"]:
+                do_update = True
+            if args[0] in ["grab_failed", "process_finished",
+                           "compile_finished"]:
+                wait_for_update = False
 
-        payload = {
-            "region": region,
-            "params": {
-                "filter[createdAt-start]": lmcd,
-                "filter[playerNames]": name,
-                "filter[gameMode]": "casual,ranked"
-            }
-        }
-        jobid = (await queue.request(jobtype="grab",
-                                     payload=[payload],
-                                     priority=[1]))[0]
+        io = SocketIO("localhost", 8080, LoggingNamespace)
+        io.on(name, update_available)
 
-        while True:
-            # wait for grab job to finish
-            status = await queue.status(jobid)
-            if status == 'finished':
+        asyncio.ensure_future(request_update())
+
+        has_embed = False
+        for _ in range(10):  # try for 10s
+            if do_update:
+                logging.info("%s: updating bot response",
+                             name)
+                do_update = False
+                data = await con.fetchrow(query, name)
+                if data is not None:
+                    has_embed = True
+                    await bot.edit_message(bot_response,
+                                           embed=emb(data))
+                else:
+                    logging.info("%s: no data in db, waiting for API",
+                                 name)
+            if not wait_for_update:
                 break
-            if status == 'failed':
-                logging.warning("'%s': not found", name)
-                if not in_cache:
-                    await bot.edit_message(msgid,
-                        "Could not find you.")
-                return
-            asyncio.sleep(0.5)
+            io.wait(seconds=1)
 
-        while True:
-            # wait for processor to update the player
-            data = await con.fetchrow(query, name, lmcd)
-            if data is not None:
-                break
-            asyncio.sleep(0.5)
-
-        await bot.edit_message(msgid, embed=emb(data))
+        if has_embed:
+            await bot.edit_message(bot_response, "Up to date.")
+        # if not, 404
 
 
 logging.basicConfig(level=logging.INFO)
