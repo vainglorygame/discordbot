@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-# TODO one request blocks the whole event loop.
 
 import logging
 import os
+import concurrent.futures
 import http
-import json
 import asyncio
 import asyncpg
 import discord
@@ -19,12 +18,15 @@ db = {
     "database": os.environ.get("POSTGRESQL_DEST_DB") or "vainsocial-web"
 }
 
+TIMEOUT = 120  # s until giving up on API
 
 bot = commands.Bot(
     command_prefix="?",
     description="Vainsocial Vainglory stats bot")
 
 pool = None
+threadpool = concurrent.futures.ThreadPoolExecutor(
+    max_workers=10)
 
 
 @bot.event
@@ -125,15 +127,10 @@ async def vainsocial(name: str):
         await bot.type()
 
         bot_response = await bot.say("Loading…")
-        # TODO this is shitty. Shouldn't need globals to keep track of updates
-        # also, this is buggy.
-        # TODO: Use a Python-friendly alternative to socketio
-        global do_update, wait_for_update
-        wait_for_update = True  # continue polling
-        do_update = True  # poll immediately
+        vainsocial.wait_for_update = True  # continue polling
+        vainsocial.do_update = True  # poll immediately
 
         async def request_update():
-            global wait_for_update
             # request an update via Vainsocial API
             api_con = http.client.HTTPConnection("localhost", 8080)
             api_con.request("HEAD", "/api/player/name/" + name)
@@ -141,46 +138,43 @@ async def vainsocial(name: str):
             logging.info("%s: API responded with status %i",
                          name, api_resp.status)
             if api_resp.status == 404:
-                wait_for_update = False
+                vainsocial.wait_for_update = False
                 await bot.edit_message(bot_response,
                                        "Could not find you.")
             api_con.close()
 
         def update_available(*args):
-            global do_update, wait_for_update
-            # TODO here is the problem ^ don't work in closures :(
             if args[0] in ["process_finished", "compile_finished"]:
-                do_update = True
+                # do partial update
+                vainsocial.do_update = True
             if args[0] == "done":
-                wait_for_update = False
+                vainsocial.wait_for_update = False
+
 
         io = SocketIO("localhost", 8080, LoggingNamespace)
         io.on(name, update_available)
 
         asyncio.ensure_future(request_update())
+        asyncio.ensure_future(
+            bot.loop.run_in_executor(threadpool, io.wait, TIMEOUT))
 
         has_embed = False
-        for _ in range(30):  # try for s
-            if do_update:
-                logging.info("%s: updating bot response",
-                             name)
-                do_update = False
+        for _ in range(TIMEOUT):
+            if vainsocial.do_update:
+                logging.info("%s: updating bot response", name)
+                vainsocial.do_update = False
                 data = await con.fetchrow(query, name)
-                if data is not None:
+                if data:
                     has_embed = True
                     await bot.edit_message(bot_response,
                                            embed=emb(data))
-                else:
-                    logging.info("%s: no data in db, waiting for API",
-                                 name)
-            if not wait_for_update:
+            if not vainsocial.wait_for_update:
                 break
-
-            io.wait(seconds=1)
+            await asyncio.sleep(0.1)
 
         if has_embed:
             await bot.edit_message(bot_response, "Up to date.")
-        # if not, 404
+        # if not, it was a 404
 
 
 logging.basicConfig(level=logging.INFO)
