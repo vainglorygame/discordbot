@@ -154,12 +154,13 @@ async def vainsocial(name: str):
         io = SocketIO("localhost", 8080, LoggingNamespace)
         io.on(name, update_available)
 
-        asyncio.ensure_future(request_update())
-        asyncio.ensure_future(
+        socket_waiter = asyncio.ensure_future(
             bot.loop.run_in_executor(threadpool, io.wait, TIMEOUT))
+        asyncio.ensure_future(request_update())
 
         has_embed = False
-        for _ in range(TIMEOUT):
+        poll_frequency = 5  # Hz
+        for _ in range(TIMEOUT*poll_frequency):
             if vainsocial.do_update:
                 logging.info("%s: updating bot response", name)
                 vainsocial.do_update = False
@@ -170,7 +171,9 @@ async def vainsocial(name: str):
                                            embed=emb(data))
             if not vainsocial.wait_for_update:
                 break
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(1.0/poll_frequency)
+
+        socket_waiter.cancel()  # stop listening on websocket
 
         if has_embed:
             await bot.edit_message(bot_response, "Up to date.")
