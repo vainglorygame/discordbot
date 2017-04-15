@@ -6,4 +6,4 @@ WORKDIR /usr/src/app
 COPY . /usr/src/app
 RUN npm install && npm cache clean
 
-CMD ["node", "worker.js"]
+CMD ["node", "bot.js"]
