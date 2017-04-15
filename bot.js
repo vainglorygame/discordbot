@@ -11,7 +11,7 @@ const sqlite = require("sqlite"),
         commandPrefix: "?"
     });
 
-const DISCORDTOKEN = process.env.DISCORDTOKEN || "Mjg5ODM2OTAwOTg5MDA5OTIw.C6SLKA.j8UETpPHztDV45xicf11hwpwNK8";
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
 client
     .on("error", console.error)
@@ -66,7 +66,7 @@ client.registry
     .registerCommandsIn(path.join(__dirname, 'commands'));
 
 
-client.login(DISCORDTOKEN);
+client.login(DISCORD_TOKEN);
 
 process.on("unhandledRejection", err => {
     console.error("Uncaught Promise Error: \n" + err.stack);
