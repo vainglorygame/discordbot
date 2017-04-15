@@ -23,7 +23,9 @@ module.exports = class ShowUserCommand extends Commando.Command {
                 key: "name",
                 label: "name",
                 prompt: "Please specify your in game name (Case Sensitive).",
-                type: "string"
+                type: "string",
+                min: 3,
+                max: 16
             } ]
         });
     }

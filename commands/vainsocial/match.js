@@ -25,13 +25,17 @@ module.exports = class ShowMatchCommand extends Commando.Command {
                 key: "name",
                 label: "name",
                 prompt: "Please specify your in game name (Case Sensitive).",
-                type: "string"
+                type: "string",
+                min: 3,
+                max: 16
             }, {
                 key: "number",
                 label: "number",
                 prompt: "Please specify how far you want to go back in history. Use 1 or leave out for the latest match.",
                 type: "integer",
-                default: 1
+                default: 1,
+                min: 1,
+                max: 10
             } ]
         });
     }

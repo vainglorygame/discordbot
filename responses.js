@@ -14,7 +14,7 @@ function vainsocialEmbed(title, link) {
         .setURL("https://vainsocial.com/" + link)
         .setColor("#55ADD3")
         .setAuthor("VainSocial", null, "https://vainsocial.com")
-        .setFooter("VainSocial - Vainglory social stats service")
+        .setFooter("VainSocial")
     ;
 }
 
@@ -24,52 +24,119 @@ function usg(msg, cmd) {
     return msg.anyUsage(cmd, undefined, null);
 }
 
-// TODO, obviously
+// based on impact score float, return an Emoji
+function emojifyScore(score) {
+    if (score > 0.7) return emoji.people.heart_eyes;
+    if (score > 0.6) return emoji.people.blush;
+    if (score > 0.5) return emoji.people.yum;
+    if (score > 0.3) return emoji.people.relieved;
+    return emoji.people.upside_down;
+}
+
+// return a match overview string
+function formatMatch(participant) {
+    let winstr = "Won";
+    if (!participant.winner) winstr = "Lost";
+    return `
+${winstr} ${participant.game_mode_id} with \`${participant.actor.replace(/\*/g, "")}\`
+KDA, CS | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.round(participant.stats.farm)}\`
+Kill Participation | \`${Math.floor(100 * participant.stats.kill_participation)}%\`
+Score | ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\`
+`;
+}
+
+// return [[title, text], …] for rosters
+function formatMatchDetail(match) {
+    let strings = [];
+    for(let roster of match.rosters) {
+        let rosterstr = `${roster.side} - \`${roster.hero_kills}\` Kills`;
+        let teamstr = "";
+        for(let participant of roster.participants) {
+            teamstr += `
+\`${participant.actor.replace(/\*/g, "")}\`, [${participant.player.name}](https://vainsocial.com/player/${participant.player.name}) \`T${Math.floor(participant.skill_tier/3)}\` | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.floor(participant.stats.farm)}\`, Score ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\``;
+        }
+        strings.push([rosterstr, teamstr]);
+    }
+    return strings;
+}
+
+// return a profile string
+function formatPlayer(player) {
+    let stats = oneLine`
+            Win Rate | \`${Math.round(100 *
+            player.currentSeries.reduce((t, s) => t + s.wins, 0) /
+            player.currentSeries.reduce((t, s) => t + s.played, 0)
+        )}%\`
+        `,
+        total_kda = oneLine`
+            Total KDA | \`${player.stats.kills}\` / \`${player.stats.deaths}\` / \`${player.stats.assists}\`
+        `,
+        best_hero = "",
+        picks = "";
+    if (player.best_hero.length > 0)
+        best_hero = oneLine`
+            Best | \`${player.best_hero[0].name}\`
+        `;
+    if (player.picks.length > 0)
+        picks = oneLine`
+            Favorite | \`${player.picks[0].name}\`, \`${player.picks[0].hero_pick} picks\`
+        `;
+    return `
+${stats}
+${total_kda}
+${best_hero}
+${picks}
+    `;
+}
 
 // show player profile and last match
 module.exports.showUser = async (msg, args) => {
     let ign = args.name,
         iterator = await api.searchPlayer(ign),
-        response, data;
+        response, player;
     while (true) {
         try {
-            data = await iterator.next();
+            player = await iterator.next();
         } catch (err) {
-            if (err.statusCode == 404) {
-                await msg.reply("Could not find `" + ign + "`");
+            if (err == "not found") {
+                await msg.say("Could not find player `" + ign + "`.");
                 break;
             }
             if (err == "exhausted")
                 break;
+            if (err.statusCode == 404)
+                continue;
         }
-        let winstr = "won";
-        if (data.last_result[0].winner == false) winstr = "lost";
+        let matches = (await api.searchMatches(ign)).data;
+        let matchstr = "not available";
+        if (matches.length > 0) matchstr = formatMatch(matches[0]);
 
-        let embed = vainsocialEmbed(ign, "player/" + ign)
+        let embed = vainsocialEmbed(`${ign} - ${player.shard_id}`, "player/" + ign)
             .setThumbnail("https://vainsocial.com/images/game/skill_tiers/" +
-                data.skill_tier + ".png")
+                player.skill_tier + ".png")
             .setDescription("")
-            .addField("Profile", `
-                (Player stats will be here)
-            `)
-            .addField("Last match", oneLine`
-                Played ${data.last_result[0].game_mode_id} with ${data.last_result[0].actor}, ${winstr}
-                *${emoji.symbols.information_source} or ${usg(msg, "vm " + ign)} for more*
-            `)
-            .setTimestamp(new Date(data.last_match_created_date))
+            .addField("Profile", formatPlayer(player), true)
+            .addField("Last match", matchstr + `
+*${emoji.symbols.information_source} or ${usg(msg, "vm " + ign)} for detail, ${emoji.symbols["1234"]} or ${usg(msg, "vh " + ign)} for more*
+            `, true)
+            .setTimestamp(new Date(player.last_match_created_date))
         ;
 
         if (response == undefined) {
-            response = await msg.replyEmbed(embed);
-            await response.react(emoji.symbols.information_source);
+            response = await msg.embed(embed);
             msg.client.on("messageReactionAdd", async (react) => {
                 if (react.message != response) return;
-                if (react.emoji != emoji.symbols.information_source) return;
-                await showMatch(msg, {
-                    name: ign,
-                    id: data.last_result[0].match_api_id
-                });
+                if (react.users.array().length <= 1) return;  // was me
+                if (react.emoji.name == emoji.symbols.information_source)
+                    await showMatch(msg, {
+                        name: ign,
+                        id: matches[0].match_api_id
+                    });
+                if (react.emoji.name == emoji.symbols["1234"])
+                    await showMatches(msg, { name: ign });
             });
+            await response.react(emoji.symbols.information_source);
+            await response.react(emoji.symbols["1234"]);
         } else {
             response = await msg.editResponse(response, {
                 type: "plain",
@@ -85,19 +152,26 @@ let showMatch = module.exports.showMatch = async (msg, args) => {
     let response,
         ign = args.name,
         id = args.id,
-        index = args.number,
-        match;
-    if (id != null) match = {};
-    else match = {};  // fetch match from API
-    let embed = vainsocialEmbed("A Match", "match/" + 12345)
-        .setDescription("A lot of stuff happened here. This was ranked or casual?")
-        .addField("Left team", `
-            Killed some heroes from the right team and someone died
-        `)
-        .addField("Right team", `
-            Did good work too. Poor minions.
-        `)
-        //.setTimestamp(new Date(data.last_match_created_date))
+        index = args.number;
+
+    let match;
+    try {
+        if (id == undefined)
+            id = (await api.searchMatches(ign)).data[index - 1].match_api_id;
+        match = await api.searchMatch(id);
+    } catch (err) {
+        await msg.say(oneLine`
+            Ooops! I don't have any data for you yet.
+            Please take a look at your profile first!
+            ${usg(msg, "v " + ign)}
+        `);  // TODO!
+        return;
+    }
+    let embed = vainsocialEmbed(`${match.game_mode}, \`${match.duration}\` minutes`, "match/" + id)
+        .setTimestamp(new Date(match.created_at))
+    formatMatchDetail(match).forEach(([title, text]) => {
+        embed.addField(title, text, true);
+    });
     ;
     response = await msg.editResponse(response, {
         type: "plain",
@@ -107,7 +181,7 @@ let showMatch = module.exports.showMatch = async (msg, args) => {
 }
 
 // show match history
-module.exports.showMatches = async (msg, args) => {
+let showMatches = module.exports.showMatches = async (msg, args) => {
     let ign = args.name,
         response;
     let count = [
@@ -122,18 +196,27 @@ module.exports.showMatches = async (msg, args) => {
         emoji.symbols.nine,
         emoji.symbols.ten
     ];
+    let data, matches, matches_num;
+    try {
+        data = await api.searchMatches(ign);
+    } catch (err) {
+        await msg.say(oneLine`
+            Ooops! I don't have any data for you yet.
+            Please take a look at your profile first!
+            ${usg(msg, "v " + ign)}
+        `);  // TODO!
+        return;
+    }
+    matches = data.data.slice(0, 3);
+    matches_num = matches.length;
+
     let embed = vainsocialEmbed(ign, "player/" + ign)
         .setDescription(`
-            Last 1337 casual and ranked matches.
-            *${emoji.symbols["1234"]} or ${usg(msg, "vm " + ign)} number for details*
-        `)
-        .addField("Match 1", `
-            Blablabla. Blabla.
-        `)
-        .addField("Match 2", `
-            Ooooh did a Minion just walk into our base?
-        `)
-    ;
+            Last ${matches_num} casual and ranked matches.
+            *${emoji.symbols["1234"]} or ${usg(msg, "vm " + ign + " number")} for details*
+        `);
+    matches.forEach((match, idx) =>
+        embed.addField(`Match ${idx + 1}`, formatMatch(match)));
     response = await msg.editResponse(response, {
         type: "plain",
         content: "",
@@ -142,15 +225,15 @@ module.exports.showMatches = async (msg, args) => {
 
     msg.client.on("messageReactionAdd", async (react) => {
         if (react.message != response) return;
-        if (react.count == 1) return;  // was me
+        if (react.users.array().length <= 1) return;  // was me
         let idx = count.indexOf(react.emoji.name);
         if (idx == -1) return;
         await showMatch(msg, {
             name: ign,
-            number: idx
+            id: matches[idx].match_api_id
         });
     });
 
-    for (let num of count)
+    for (let num of count.slice(0, matches_num))
         await response.react(num)
 }

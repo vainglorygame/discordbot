@@ -19,6 +19,7 @@ client
     .on("debug", console.log)
     .on("ready", () => {
         console.log(`Client ready; logged in as ${client.user.username}#${client.user.discriminator} (${client.user.id})`);
+        client.user.setGame("?v shutterflySEA | vainsocial.com");
     })
     .on('disconnect', () => { console.warn('Disconnected!'); })
     .on('reconnecting', () => { console.warn('Reconnecting...'); })
@@ -59,8 +60,14 @@ client.setProvider(
 
 client.registry
     .registerGroup('vainsocial', 'VainSocial')
-    .registerDefaults()
+    .registerDefaultTypes()
+    .registerDefaultGroups()
+    .registerDefaultCommands({ eval_: false, commandState: false })
     .registerCommandsIn(path.join(__dirname, 'commands'));
 
 
 client.login(DISCORDTOKEN);
+
+process.on("unhandledRejection", err => {
+    console.error("Uncaught Promise Error: \n" + err.stack);
+});
