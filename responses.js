@@ -108,12 +108,16 @@ module.exports.showUser = async (msg, args) => {
                 continue;
         }
         let matches = (await api.searchMatches(ign)).data;
-        let matchstr = "not available";
-        if (matches.length > 0) matchstr = formatMatch(matches[0]);
+        let matchstr = "not available",
+            skill_tier = -1;
+        if (matches.length > 0) {
+            matchstr = formatMatch(matches[0]);
+            skill_tier = matches[0].skill_tier;
+        }
 
         let embed = vainsocialEmbed(`${ign} - ${player.shard_id}`, "player/" + ign)
             .setThumbnail("https://vainsocial.com/images/game/skill_tiers/" +
-                player.skill_tier + ".png")
+                skill_tier + ".png")
             .setDescription("")
             .addField("Profile", formatPlayer(player), true)
             .addField("Last match", matchstr + `
