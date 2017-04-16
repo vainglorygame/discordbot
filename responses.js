@@ -109,10 +109,12 @@ module.exports.showUser = async (msg, args) => {
         }
         let matches = (await api.searchMatches(ign)).data;
         let matchstr = "not available",
-            skill_tier = -1;
+            skill_tier = -1,
+            last_match_date = new Date();
         if (matches.length > 0) {
             matchstr = formatMatch(matches[0]);
             skill_tier = matches[0].skill_tier;
+            last_match_date = matches[0].created_at;
         }
 
         let embed = vainsocialEmbed(`${ign} - ${player.shard_id}`, "player/" + ign)
@@ -123,7 +125,7 @@ module.exports.showUser = async (msg, args) => {
             .addField("Last match", matchstr + `
 *${emoji.symbols.information_source} or ${usg(msg, "vm " + ign)} for detail, ${emoji.symbols["1234"]} or ${usg(msg, "vh " + ign)} for more*
             `, true)
-            .setTimestamp(new Date(player.last_match_created_date))
+            .setTimestamp(last_match_date)
         ;
 
         if (response == undefined) {
