@@ -173,7 +173,7 @@ let showMatch = module.exports.showMatch = async (msg, args) => {
         `);  // TODO!
         return;
     }
-    let embed = vainsocialEmbed(`${match.game_mode}, \`${match.duration}\` minutes`, "match/" + id)
+    let embed = vainsocialEmbed(`${match.game_mode}, ${match.duration} minutes`, "match/" + id)
         .setTimestamp(new Date(match.created_at))
     formatMatchDetail(match).forEach(([title, text]) => {
         embed.addField(title, text, true);
@@ -218,8 +218,8 @@ let showMatches = module.exports.showMatches = async (msg, args) => {
 
     let embed = vainsocialEmbed(ign, "player/" + ign)
         .setDescription(`
-            Last ${matches_num} casual and ranked matches.
-            *${emoji.symbols["1234"]} or ${usg(msg, "vm " + ign + " number")} for details*
+Last ${matches_num} casual and ranked matches.
+*${emoji.symbols["1234"]} or ${usg(msg, "vm " + ign + " number")} for details*
         `);
     matches.forEach((match, idx) =>
         embed.addField(`Match ${idx + 1}`, formatMatch(match)));
