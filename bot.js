@@ -19,7 +19,7 @@ client
     .on("debug", console.log)
     .on("ready", () => {
         console.log(`Client ready; logged in as ${client.user.username}#${client.user.discriminator} (${client.user.id})`);
-        client.user.setGame("?v shutterflySEA | vainsocial.com");
+        client.user.setGame("?v shutterfly | vainsocial.com");
     })
     .on('disconnect', () => { console.warn('Disconnected!'); })
     .on('reconnecting', () => { console.warn('Reconnecting...'); })
