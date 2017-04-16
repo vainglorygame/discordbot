@@ -114,7 +114,7 @@ module.exports.showUser = async (msg, args) => {
         if (matches.length > 0) {
             matchstr = formatMatch(matches[0]);
             skill_tier = matches[0].skill_tier;
-            last_match_date = matches[0].created_at;
+            last_match_date = new Date(matches[0].created_at);
         }
 
         let embed = vainsocialEmbed(`${ign} - ${player.shard_id}`, "player/" + ign)
