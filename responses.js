@@ -11,7 +11,8 @@ const Commando = require("discord.js-commando"),
     api = require("./api");
 
 const PREVIEW = process.env.PREVIEW || true,
-    MATCH_HISTORY_LEN = parseInt(process.env.MATCH_HISTORY_LEN) || 3;
+    MATCH_HISTORY_LEN = parseInt(process.env.MATCH_HISTORY_LEN) || 3,
+    REACTION_TIMEOUT = parseInt(process.env.REACTION_TIMEOUT) || 60;  // s
 
 const reactionsPipe = new Channel();
 
@@ -116,7 +117,7 @@ module.exports.onNewReaction = (reaction) => {
 
 // create an iterator that returns promises to await new reactions
 // the Promise result is the reaction name
-function awaitReactions(message, emoji, timeout=60) {
+function awaitReactions(message, emoji, timeout=REACTION_TIMEOUT) {
     const pipeOut = new Channel();
     // stop listening after timeout
     setTimeout(() => pipeOut.close(), timeout*1000);

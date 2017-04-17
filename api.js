@@ -14,6 +14,8 @@ let cache = cacheManager.caching({
     ttl: 10  // s
 });
 
+const UPDATE_TIMEOUT = parseInt(process.env.UPDATE_TIMEOUT) || 60;  // s
+
 const API_FE_URL = process.env.API_FE_URL || "http://vainsocial.dev/bots/api",
       API_MAP_URL = process.env.API_MAP_URL || "http://vainsocial.dev/masters/",
       API_WS_URL = process.env.API_WS_URL || "ws://vainsocial.dev/ws",
@@ -79,7 +81,7 @@ module.exports.mapGameMode = async function(id) {
 
 // be an async iterator
 // next() returns promises that are awaited until there is an update
-module.exports.subscribeUpdates = function(name, timeout=60) {
+module.exports.subscribeUpdates = function(name, timeout=UPDATE_TIMEOUT) {
     const channel = new Channel(),
         subscription = subscribe("player." + name, channel);
 
