@@ -13,10 +13,7 @@ module.exports = class ShowMatchesCommand extends Commando.Command {
             aliases: ["vh"],
             group: "vainsocial",
             memberName: "vainsocial-matches",
-            description: "Show a user's match history.",
-            details: oneLine`
-                todo
-            `,
+            description: "Shows a user's match history.",
             examples: ["vh shutterfly"],
             argsType: "single",
 

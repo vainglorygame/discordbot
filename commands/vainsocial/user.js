@@ -13,9 +13,9 @@ module.exports = class ShowUserCommand extends Commando.Command {
             aliases: ["v", "vu"],
             group: "vainsocial",
             memberName: "vainsocial-user",
-            description: "Show a player\'s profile.",
+            description: "Shows a player\'s profile.",
             details: oneLine`
-                Display VainSocial lifetime statistics from Vainglory
+Display VainSocial lifetime statistics from Vainglory
             `,
             examples: ["vu shutterfly"],
 
