@@ -10,7 +10,9 @@
   "license": "UNLICENSED",
   "dependencies": {
     "async-csp": "^0.5.0",
+    "bluebird": "^3.5.0",
     "bufferutil": "^3.0.0",
+    "cache-manager": "^2.4.0",
     "discord-emoji": "^1.1.1",
     "discord.js": "git+https://github.com/hydrabolt/discord.js.git",
     "discord.js-commando": "^0.9.0",

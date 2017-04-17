@@ -14,9 +14,6 @@ module.exports = class ShowMatchCommand extends Commando.Command {
             group: "vainsocial",
             memberName: "vainsocial-match",
             description: "Show a user's match in detail.",
-            details: oneLine`
-                todo
-            `,
             examples: ["vm shutterfly 1"],
             argsType: "multiple",
             argsCount: 2,

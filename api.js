@@ -3,11 +3,19 @@
 "use strict";
 
 const request = require("request-promise-native"),
+    Promise = require("bluebird"),
     WebSocket = require("ws"),
     webstomp = require("webstomp-client"),
+    cacheManager = require("cache-manager"),
     Channel = require("async-csp").Channel;
 
+let cache = cacheManager.caching({
+    store: "memory",
+    ttl: 10  // s
+});
+
 const API_FE_URL = process.env.API_FE_URL || "http://vainsocial.dev/bots/api",
+      API_MAP_URL = process.env.API_MAP_URL || "http://vainsocial.dev/masters/",
       API_WS_URL = process.env.API_WS_URL || "ws://vainsocial.dev/ws",
       API_BE_URL = process.env.API_BE_URL || "http://vainsocial.dev/bridge";
 
@@ -22,6 +30,13 @@ const notif = webstomp.over(new WebSocket(API_WS_URL,
 })();
 
 // TODO use keepalive / connection pool
+function getMap(url) {
+    return request({
+        uri: API_MAP_URL + url,
+        json: true
+    });
+}
+
 function getFE(url) {
     return request({
         uri: API_FE_URL + url,
@@ -43,45 +58,85 @@ function subscribe(topic, channel) {
     }, {"ack": "client"});
 }
 
-// be an async generator
-// next() returns player data whenever an update is available
-module.exports.searchPlayer = async function (name, timeout=60) {
-    let channel = new Channel(),
+// return id<->name mappings
+async function getMappings() {
+    return await cache.wrap("mappings", async () => {
+        let mapping = new Map();
+        await Promise.map(
+            ["gamemode"], async (table) => {
+                mapping[table] = new Map();
+                (await getMap(table)).map(
+                    (map) => mapping[table]["id"] = map["name"])
+            }
+        );
+        return mapping;
+    });
+}
+
+module.exports.mapGameMode = async function(id) {
+    return (await getMappings())["gamemode"][id];
+}
+
+// be an async iterator
+// next() returns promises that are awaited until there is an update
+module.exports.subscribeUpdates = function(name, timeout=60) {
+    const channel = new Channel(),
         subscription = subscribe("player." + name, channel);
-    await postBE("/player/" + name + "/update");
+
     // stop updates after timeout
-    setTimeout(() => {
-        channel.close();
-        subscription.unsubscribe();
-    }, timeout*1000);
-    channel.put("initial");  // initial fetch
+    setTimeout(() => channel.close(), timeout*1000);
 
-    let generator = async () => {
-        let msg;
-        while (true) {
+    let msg;
+    return { next: async function () {
+        if (this._first) {
+            this._first = false;
+            await postBE("/player/" + name + "/update");
+            return true;
+        }
+        do {
             msg = await channel.take();
-            if (["initial", "search_fail", "stats_update",
-                "matches_update"].indexOf(msg) != -1)
-                break;
+        } while([Channel.DONE, "initial", "search_fail",
+            "stats_update", "matches_update"].indexOf(msg) == -1);
+        // bust caches
+        if (["stats_update"].indexOf(msg) != -1)
+            cache.del("player+" + name);
+        if (["matches_update"].indexOf(msg) != -1) {
+            cache.del("matches+" + name);
+            cache.del("player+" + name);
         }
-        if (msg == "search_fail") {
-            throw "not found";
+        if ([Channel.DONE, "search_fail"].indexOf(msg) != -1) {
+            subscription.unsubscribe();
+            return undefined;
         }
-        if (msg == Channel.DONE) {
-            throw "exhausted";
-        }
-        return getFE("/player/" + name);
-    }
+        return true;
+    }, _first: true };
+}
 
-    return { next: generator };
+// return player
+module.exports.getPlayer = async function(name) {
+    return await cache.wrap("player+" + name, async () => {
+        try {
+            return await getFE("/player/" + name);
+        } catch (err) {
+            return undefined;
+        }
+    }, { ttl: 60 });
 }
 
 // return matches
-module.exports.searchMatches = async function (name) {
-    return getFE("/player/" + name + "/matches/1.1.1.1");
+module.exports.getMatches = async function(name) {
+    return await cache.wrap("matches+" + name, async () => {
+        try {
+            return await getFE("/player/" + name + "/matches/1.1.1.1");
+        } catch (err) {
+            return undefined;
+        }
+    }, { ttl: 60 });
 }
 
 // return single match
-module.exports.searchMatch = async function (id) {
-    return getFE("/match/" + id);
+module.exports.getMatch = async function(id) {
+    return await cache.wrap("match+" + id, async () =>
+        getFE("/match/" + id),
+    { ttl: 60 * 60 });
 }

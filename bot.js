@@ -2,14 +2,20 @@
 /* jshint esnext:true */
 "use strict";
 
+const PREVIEW = process.env.PREVIEW || true;
+
 const sqlite = require("sqlite"),
     path = require("path"),
     Commando = require("discord.js-commando"),
     oneLine = require("common-tags").oneLine,
     client = new Commando.Client({
-        owner: "227440521704898561",  // shutterfly
-        commandPrefix: "?"
-    });
+        owners: ["227440521704898561", "208974925199966208"],
+        // shutterfly, stormcaller
+        commandPrefix: (PREVIEW? "?" : "!"),
+        invite: "https://discord.gg/txTchJY",
+        unknownCommandResponse: false
+    }),
+    responses = require("./responses");
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
@@ -52,7 +58,10 @@ client
             ${enabled ? 'enabled' : 'disabled'}
             ${guild ? `in guild ${guild.name} (${guild.id})` : 'globally'}.
         `);
-    });
+    })
+
+    // response reaction interface
+    .on("messageReactionAdd", responses.onNewReaction);
 
 client.setProvider(
     sqlite.open(path.join(__dirname, "settings.sqlite3")).then(
