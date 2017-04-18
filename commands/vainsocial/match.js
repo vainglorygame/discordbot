@@ -23,6 +23,7 @@ module.exports = class ShowMatchCommand extends Commando.Command {
                 label: "name",
                 prompt: "Please specify your in game name (Case Sensitive).",
                 type: "string",
+                default: "?",
                 min: 3,
                 max: 16
             }, {

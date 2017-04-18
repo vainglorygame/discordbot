@@ -98,7 +98,7 @@ function formatPlayer(player) {
         `;
     if (player.picks.length > 0)
         picks = oneLine`
-            Favorite | \`${player.picks[0].name}\`, \`${player.picks[0].hero_pick} picks\`
+            Favorite | \`${player.picks[0].actor.replace(/\*/g, "")}\`, \`${player.picks[0].hero_pick} picks\`
         `;
     return `
 ${stats}
@@ -183,14 +183,41 @@ Currently running on ${msg.client.guilds.size} servers.`)
     );
 }
 
+// return the sqlite stored ign for this user
+function nameByUser(msg) {
+    return msg.guild.settings.get("remember+" + msg.author.id);
+}
+
+// tell the user that they need to store their name
+function formatSorryUnknown(msg) {
+    return `You're unknown to our service. Try ${usg(msg, "help vme")}.`;
+}
+
+module.exports.rememberUser = async (msg, args) => {
+    const ign = args.name;
+    await msg.guild.settings.set("remember+" + msg.author.id, ign);
+    await msg.reply(
+`You are now able to use ${usg(msg, "v")} to access your profile faster.`);
+}
+
 // show player profile and last match
 module.exports.showUser = async (msg, args) => {
-    const ign = args.name,
-        waiter = api.subscribeUpdates(ign);
     let responded = false,
         response,
+        ign = args.name,
         reactionsAdded = false;
 
+    // shorthand
+    // "?" is not accepted as user input, but the default for empty
+    if (ign == "?") {
+        ign = nameByUser(msg);
+        if (ign == undefined) {
+            await msg.reply(formatSorryUnknown(msg));
+            return;
+        }
+    }
+
+    const waiter = api.subscribeUpdates(ign);
     while (await waiter.next() != undefined) {
         const [player, matches] = await Promise.all([
             api.getPlayer(ign),
@@ -253,12 +280,21 @@ async function respondMatch(msg, ign, id, response=undefined) {
 }
 
 module.exports.showMatch = async (msg, args) => {
-    const ign = args.name,
-        index = args.number,
-        waiter = api.subscribeUpdates(ign);
+    const index = args.number;
     let responded = false,
+        ign = args.name,
         response;
 
+    // shorthand
+    if (ign == "?") {
+        ign = nameByUser(msg);
+        if (ign == undefined) {
+            await msg.reply(formatSorryUnknown(msg));
+            return;
+        }
+    }
+
+    const waiter = api.subscribeUpdates(ign);
     while (await waiter.next() != undefined) {
         let matches = await api.getMatches(ign);
         if (matches == undefined || matches.data.length == 0) {
@@ -315,11 +351,20 @@ Last ${matches_num} casual and ranked matches.
 }
 
 module.exports.showMatches = async (msg, args) => {
-    const ign = args.name,
-        waiter = api.subscribeUpdates(ign);
-    let responded = false,
+    let ign = args.name,
+        responded = false,
         response;
 
+    // shorthand
+    if (ign == "?") {
+        ign = nameByUser(msg);
+        if (ign == undefined) {
+            await msg.reply(formatSorryUnknown(msg));
+            return;
+        }
+    }
+
+    const waiter = api.subscribeUpdates(ign);
     while (await waiter.next() != undefined) {
         let matches = await api.getMatches(ign);
         if (matches == undefined || matches.data.length == 0) {

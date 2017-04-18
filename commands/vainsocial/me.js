@@ -6,31 +6,30 @@ const Commando = require("discord.js-commando"),
     oneLine = require("common-tags").oneLine,
     responses = require("../../responses");
 
-module.exports = class ShowUserCommand extends Commando.Command {
+module.exports = class RememberUserCommand extends Commando.Command {
     constructor(client) {
         super(client, {
-            name: "vainsocial-user",
-            aliases: ["v", "vu"],
+            name: "vainsocial-me",
+            aliases: ["vme"],
             group: "vainsocial",
-            memberName: "vainsocial-user",
-            description: "Shows a player\'s profile.",
+            memberName: "vainsocial-me",
+            description: "Remembers a users's in game name.",
             details: oneLine`
-Display VainSocial lifetime statistics from Vainglory
+Store your in game name for quicker access to other commands.
             `,
-            examples: ["vu shutterfly"],
+            examples: ["vme shutterfly"],
 
             args: [ {
                 key: "name",
                 label: "name",
                 prompt: "Please specify your in game name (Case Sensitive).",
                 type: "string",
-                default: "?",
                 min: 3,
                 max: 16
             } ]
         });
     }
     async run(msg, args) {
-        await responses.showUser(msg, args);
+        await responses.rememberUser(msg, args);
     }
 };

@@ -68,7 +68,7 @@ async function getMappings() {
             ["gamemode"], async (table) => {
                 mapping[table] = new Map();
                 (await getMap(table)).map(
-                    (map) => mapping[table]["id"] = map["name"])
+                    (map) => mapping[table][map["id"]] = map["name"])
             }
         );
         return mapping;
