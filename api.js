@@ -35,21 +35,24 @@ const notif = webstomp.over(new WebSocket(API_WS_URL,
 function getMap(url) {
     return request({
         uri: API_MAP_URL + url,
-        json: true
+        json: true,
+        forever: true
     });
 }
 
 function getFE(url) {
     return request({
         uri: API_FE_URL + url,
-        json: true
+        json: true,
+        forever: true
     });
 }
 
 function postBE(url) {
     return request.post({
         uri: API_BE_URL + url,
-        json: true
+        json: true,
+        forever: true
     });
 }
 
