@@ -31,7 +31,6 @@ const notif = webstomp.over(new WebSocket(API_WS_URL,
     );
 })();
 
-// TODO use keepalive / connection pool
 function getMap(url) {
     return request({
         uri: API_MAP_URL + url,
