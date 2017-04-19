@@ -19,13 +19,19 @@ const PREVIEW = process.env.PREVIEW || true,
 const reactionsPipe = new Channel();
 
 // embed template
-function vainsocialEmbed(title, link) {
+function vainsocialEmbed(title, link, command) {
     return new Discord.RichEmbed()
         .setTitle(title)
         .setColor("#55ADD3")
-        .setURL(ROOTURL + link)
-        .setAuthor("VainSocial" + (PREVIEW? " preview":""), ROOTURL + "images/brands/logo-blue.png", ROOTURL)
+        .setURL(ROOTURL + link + track(command))
+        .setAuthor("VainSocial" + (PREVIEW? " preview":""), ROOTURL + "images/brands/logo-blue.png",
+            ROOTURL + track(command))
         .setFooter("VainSocial" + (PREVIEW? " preview":""), ROOTURL + "images/brands/logo-blue.png")
+}
+
+// analytics url
+function track(command) {
+    return "?utm_source=discordbot&utm_medium=discord&utm_campaign=" + command;
 }
 
 // return the shortest version of the usage help
@@ -66,7 +72,7 @@ async function formatMatchDetail(match) {
         for(let participant of roster.participants) {
             const hero = await api.mapActor(participant.actor);
             teamstr += `
-\`${hero}\`, [${participant.player.name}](${ROOTURL}player/${participant.player.name}) \`T${Math.floor(participant.skill_tier/3)}\` | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.floor(participant.stats.farm)}\`, Score ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\``;
+\`${hero}\`, [${participant.player.name}](${ROOTURL}player/${participant.player.name}${track("match-detail")}) \`T${Math.floor(participant.skill_tier/3)}\` | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.floor(participant.stats.farm)}\`, Score ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\``;
         }
         strings.push([rosterstr, teamstr]);
     }
@@ -176,12 +182,12 @@ async function respond(msg, data, response) {
 
 // about
 module.exports.showAbout = async (msg) => {
-    await msg.embed(vainsocialEmbed("About VainSocial", "")
+    await msg.embed(vainsocialEmbed("About VainSocial", "", "about")
         .setDescription(
 `Built by the VainSocial development team using the MadGlory API.
 Currently running on ${msg.client.guilds.size} servers.`)
         .addField("Website",
-            ROOTURL, true)
+            ROOTURL + track("about"), true)
         .addField("Bot invite link",
             "https://discordapp.com/oauth2/authorize?&client_id=287297889024213003&scope=bot&permissions=52288", true)
         .addField("Developer Discord invite",
@@ -246,7 +252,7 @@ module.exports.showUser = async (msg, args) => {
 *${emoji.symbols.information_source} or ${usg(msg, "vm " + ign)} for detail,
 ${emoji.symbols["1234"]} or ${usg(msg, "vh " + ign)} for more*`
 
-        const embed = vainsocialEmbed(`${ign} - ${player.shard_id}`, "player/" + ign)
+        const embed = vainsocialEmbed(`${ign} - ${player.shard_id}`, "player/" + ign, "vainsocial-user")
             .setThumbnail(ROOTURL + "images/game/skill_tiers/" +
                 matches.data[0].skill_tier + ".png")
             .setDescription("")
@@ -279,7 +285,8 @@ ${emoji.symbols["1234"]} or ${usg(msg, "vh " + ign)} for more*`
 async function respondMatch(msg, ign, id, response=undefined) {
     const match = await api.getMatch(id);
 
-    let embed = vainsocialEmbed(`${match.game_mode}, ${match.duration} minutes`, ign + "/" + id)
+    let embed = vainsocialEmbed(`${match.game_mode}, ${match.duration} minutes`,
+        ign + "/" + id, "vainsocial-match")
         .setTimestamp(new Date(match.created_at));
     (await formatMatchDetail(match)).forEach(([title, text]) => {
         embed.addField(title, text, true);
@@ -334,7 +341,7 @@ async function respondMatches(msg, ign, response=undefined) {
         matches = data.data.slice(0, MATCH_HISTORY_LEN),
         matches_num = matches.length;
 
-    let embed = vainsocialEmbed(ign, "player/" + ign)
+    let embed = vainsocialEmbed(ign, "player/" + ign, "vainsocial-matches")
         .setDescription(`
 Last ${matches_num} casual and ranked matches.
 *${emoji.symbols["1234"]} or ${usg(msg, "vm " + ign + " number")} for details*
