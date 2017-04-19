@@ -13,28 +13,19 @@ const Commando = require("discord.js-commando"),
 const PREVIEW = process.env.PREVIEW || true,
     MATCH_HISTORY_LEN = parseInt(process.env.MATCH_HISTORY_LEN) || 3,
     IGN_ROTATE_TIMEOUT = parseInt(process.env.IGN_ROTATE_TIMEOUT) || 300,
-    REACTION_TIMEOUT = parseInt(process.env.REACTION_TIMEOUT) || 60;  // s
+    REACTION_TIMEOUT = parseInt(process.env.REACTION_TIMEOUT) || 60,  // s
+    ROOTURL = (PREVIEW? "https://preview.vainsocial.com/":"https://vainsocial.com/");
 
 const reactionsPipe = new Channel();
 
 // embed template
 function vainsocialEmbed(title, link) {
-    let embed = new Discord.RichEmbed()
+    return new Discord.RichEmbed()
         .setTitle(title)
-        .setColor("#55ADD3");
-    if (PREVIEW) {
-        embed
-            .setURL("https://preview.vainsocial.com/" + link)
-            .setAuthor("VainSocial preview", "http://preview.vainsocial.com/images/brands/logo-blue.png",
-                "https://preview.vainsocial.com")
-            .setFooter("VainSocial preview", "http://preview.vainsocial.com/images/brands/logo-blue.png");
-    } else {
-        embed
-            .setURL("https://vainsocial.com/" + link)
-            .setAuthor("VainSocial", "http://vainsocial.com/images/brands/logo-blue.png", "https://vainsocial.com")
-            .setFooter("VainSocial", "http://vainsocial.com/images/brands/logo-blue.png");
-    }
-    return embed;
+        .setColor("#55ADD3")
+        .setURL(ROOTURL + link)
+        .setAuthor("VainSocial" + (PREVIEW? " preview":""), ROOTURL + "images/brands/logo-blue.png", ROOTURL)
+        .setFooter("VainSocial" + (PREVIEW? " preview":""), ROOTURL + "images/brands/logo-blue.png")
 }
 
 // return the shortest version of the usage help
@@ -75,7 +66,7 @@ async function formatMatchDetail(match) {
         for(let participant of roster.participants) {
             const hero = await api.mapActor(participant.actor);
             teamstr += `
-\`${hero}\`, [${participant.player.name}](https://vainsocial.com/player/${participant.player.name}) \`T${Math.floor(participant.skill_tier/3)}\` | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.floor(participant.stats.farm)}\`, Score ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\``;
+\`${hero}\`, [${participant.player.name}](${ROOTURL}player/${participant.player.name}) \`T${Math.floor(participant.skill_tier/3)}\` | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.floor(participant.stats.farm)}\`, Score ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\``;
         }
         strings.push([rosterstr, teamstr]);
     }
@@ -190,7 +181,7 @@ module.exports.showAbout = async (msg) => {
 `Built by the VainSocial development team using the MadGlory API.
 Currently running on ${msg.client.guilds.size} servers.`)
         .addField("Website",
-            "https://vainsocial.com", true)
+            ROOTURL, true)
         .addField("Bot invite link",
             "https://discordapp.com/oauth2/authorize?&client_id=287297889024213003&scope=bot&permissions=52288", true)
         .addField("Developer Discord invite",
@@ -256,7 +247,7 @@ module.exports.showUser = async (msg, args) => {
 ${emoji.symbols["1234"]} or ${usg(msg, "vh " + ign)} for more*`
 
         const embed = vainsocialEmbed(`${ign} - ${player.shard_id}`, "player/" + ign)
-            .setThumbnail("https://vainsocial.com/images/game/skill_tiers/" +
+            .setThumbnail(ROOTURL + "images/game/skill_tiers/" +
                 matches.data[0].skill_tier + ".png")
             .setDescription("")
             .addField("Profile", await formatPlayer(player), true)
@@ -288,7 +279,7 @@ ${emoji.symbols["1234"]} or ${usg(msg, "vh " + ign)} for more*`
 async function respondMatch(msg, ign, id, response=undefined) {
     const match = await api.getMatch(id);
 
-    let embed = vainsocialEmbed(`${match.game_mode}, ${match.duration} minutes`, "match/" + id)
+    let embed = vainsocialEmbed(`${match.game_mode}, ${match.duration} minutes`, ign + "/" + id)
         .setTimestamp(new Date(match.created_at));
     (await formatMatchDetail(match)).forEach(([title, text]) => {
         embed.addField(title, text, true);
