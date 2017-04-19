@@ -74,11 +74,18 @@ async function getMappings() {
             }
         );
         return mapping;
-    });
+    }, { ttl: 60 * 30 });
 }
 
 module.exports.mapGameMode = async function(id) {
     return (await getMappings())["gamemode"][id];
+}
+
+// return a set of IGN of supporters
+module.exports.getGamers = async function() {
+    return await cache.wrap("gamers", async () => {
+        return (await getFE("/gamer")).map((gamer) => gamer.name);
+    }, { ttl: 60 * 30 });
 }
 
 // be an async iterator

@@ -12,6 +12,7 @@ const Commando = require("discord.js-commando"),
 
 const PREVIEW = process.env.PREVIEW || true,
     MATCH_HISTORY_LEN = parseInt(process.env.MATCH_HISTORY_LEN) || 3,
+    IGN_ROTATE_TIMEOUT = parseInt(process.env.IGN_ROTATE_TIMEOUT) || 300,
     REACTION_TIMEOUT = parseInt(process.env.REACTION_TIMEOUT) || 60;  // s
 
 const reactionsPipe = new Channel();
@@ -106,6 +107,18 @@ ${total_kda}
 ${best_hero}
 ${picks}
     `;
+}
+
+module.exports.rotateGameStatus = (client) => {
+    (async function rotate() {
+        const gamers = await api.getGamers(),
+            idx = Math.floor(Math.random() * (gamers.length - 1)) + 1;
+        if (PREVIEW) await client.user.setGame(
+            `?v ${gamers[idx]} | preview.vainsocial.com`);
+        else await client.user.setGame(
+            `!v ${gamers[idx]} | vainsocial.com`);
+        setTimeout(rotate, IGN_ROTATE_TIMEOUT * 1000);
+    })();
 }
 
 // reaction -> pipe ->>> consumers
