@@ -55,10 +55,11 @@ function emojifyScore(score) {
 // return a match overview string
 async function formatMatch(participant) {
     let winstr = "Won",
+        hero = await api.mapActor(participant.actor),
         game_mode = await api.mapGameMode(participant.game_mode_id);
     if (!participant.winner) winstr = "Lost";
     return `
-${winstr} ${game_mode} with \`${participant.actor.replace(/\*/g, "")}\`
+${winstr} ${game_mode} with \`${hero}\`
 KDA, CS | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.round(participant.stats.farm)}\`
 Kill Participation | \`${Math.floor(100 * participant.stats.kill_participation)}%\`
 Score | ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\`
@@ -72,8 +73,9 @@ async function formatMatchDetail(match) {
         let rosterstr = `${roster.side} - \`${roster.hero_kills}\` Kills`;
         let teamstr = "";
         for(let participant of roster.participants) {
+            const hero = await api.mapActor(participant.actor);
             teamstr += `
-\`${participant.actor.replace(/\*/g, "")}\`, [${participant.player.name}](https://vainsocial.com/player/${participant.player.name}) \`T${Math.floor(participant.skill_tier/3)}\` | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.floor(participant.stats.farm)}\`, Score ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\``;
+\`${hero}\`, [${participant.player.name}](https://vainsocial.com/player/${participant.player.name}) \`T${Math.floor(participant.skill_tier/3)}\` | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.floor(participant.stats.farm)}\`, Score ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\``;
         }
         strings.push([rosterstr, teamstr]);
     }
@@ -81,8 +83,8 @@ async function formatMatchDetail(match) {
 }
 
 // return a profile string
-function formatPlayer(player) {
-    let stats = oneLine`
+async function formatPlayer(player) {
+    const stats = oneLine`
             Win Rate | \`${Math.round(100 *
             player.currentSeries.reduce((t, s) => t + s.wins, 0) /
             player.currentSeries.reduce((t, s) => t + s.played, 0)
@@ -90,17 +92,19 @@ function formatPlayer(player) {
         `,
         total_kda = oneLine`
             Total KDA | \`${player.stats.kills}\` / \`${player.stats.deaths}\` / \`${player.stats.assists}\`
-        `,
-        best_hero = "",
+        `;
+    let best_hero = "",
         picks = "";
     if (player.best_hero.length > 0)
         best_hero = oneLine`
             Best | \`${player.best_hero[0].name}\`
         `;
-    if (player.picks.length > 0)
+    if (player.picks.length > 0) {
+        const hero = await api.mapActor(player.picks[0].actor);
         picks = oneLine`
-            Favorite | \`${player.picks[0].actor.replace(/\*/g, "")}\`, \`${player.picks[0].hero_pick} picks\`
+            Favorite | \`${hero}\`, \`${player.picks[0].hero_pick} picks\`
         `;
+    }
     return `
 ${stats}
 ${total_kda}
@@ -255,7 +259,7 @@ ${emoji.symbols["1234"]} or ${usg(msg, "vh " + ign)} for more*`
             .setThumbnail("https://vainsocial.com/images/game/skill_tiers/" +
                 matches.data[0].skill_tier + ".png")
             .setDescription("")
-            .addField("Profile", formatPlayer(player), true)
+            .addField("Profile", await formatPlayer(player), true)
             .addField("Last match", await formatMatch(matches.data[0]) + moreHelp, true)
             .setTimestamp(new Date(matches.data[0].created_at));
         response = await respond(msg, embed, response);

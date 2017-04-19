@@ -66,19 +66,33 @@ function subscribe(topic, channel) {
 async function getMappings() {
     return await cache.wrap("mappings", async () => {
         let mapping = new Map();
-        await Promise.map(
-            ["gamemode"], async (table) => {
-                mapping[table] = new Map();
-                (await getMap(table)).map(
-                    (map) => mapping[table][map["id"]] = map["name"])
-            }
-        );
+        await Promise.all([
+            Promise.map(
+                ["gamemode"], async (table) => {
+                    mapping[table] = new Map();
+                    (await getMap(table)).map(
+                        (map) => mapping[table][map["id"]] = map["name"])
+                }
+            ),
+            // name <-> API name
+            Promise.map(
+                ["hero"], async (table) => {
+                    mapping[table] = new Map();
+                    (await getMap(table)).map(
+                        (map) => mapping[table][map["api_name"]] = map["name"])
+                }
+            )
+        ]);
         return mapping;
     }, { ttl: 60 * 30 });
 }
 
 module.exports.mapGameMode = async function(id) {
     return (await getMappings())["gamemode"][id];
+}
+
+module.exports.mapActor = async function(api_name) {
+    return (await getMappings())["hero"][api_name];
 }
 
 // return a set of IGN of supporters
