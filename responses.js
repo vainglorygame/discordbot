@@ -25,14 +25,14 @@ function vainsocialEmbed(title, link) {
     if (PREVIEW) {
         embed
             .setURL("https://preview.vainsocial.com/" + link)
-            .setAuthor("VainSocial preview", null,
+            .setAuthor("VainSocial preview", "http://preview.vainsocial.com/images/brands/logo-blue.png",
                 "https://preview.vainsocial.com")
-            .setFooter("VainSocial preview");
+            .setFooter("VainSocial preview", "http://preview.vainsocial.com/images/brands/logo-blue.png");
     } else {
         embed
             .setURL("https://vainsocial.com/" + link)
-            .setAuthor("VainSocial", null, "https://vainsocial.com")
-            .setFooter("VainSocial");
+            .setAuthor("VainSocial", "http://vainsocial.com/images/brands/logo-blue.png", "https://vainsocial.com")
+            .setFooter("VainSocial", "http://vainsocial.com/images/brands/logo-blue.png");
     }
     return embed;
 }
