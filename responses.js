@@ -5,6 +5,7 @@
 const Commando = require("discord.js-commando"),
     Discord = require("discord.js"),
     Promise = require("bluebird"),
+    ua = require("universal-analytics"),
     emoji = require("discord-emoji"),
     oneLine = require("common-tags").oneLine,
     Channel = require("async-csp").Channel,
@@ -14,6 +15,7 @@ const PREVIEW = process.env.PREVIEW || true,
     MATCH_HISTORY_LEN = parseInt(process.env.MATCH_HISTORY_LEN) || 3,
     IGN_ROTATE_TIMEOUT = parseInt(process.env.IGN_ROTATE_TIMEOUT) || 300,
     REACTION_TIMEOUT = parseInt(process.env.REACTION_TIMEOUT) || 60,  // s
+    GOOGLEANALYTICS_ID = process.env.GOOGLEANALYTICS_ID,
     ROOTURL = (PREVIEW? "https://preview.vainsocial.com/":"https://vainsocial.com/");
 
 const reactionsPipe = new Channel();
@@ -32,6 +34,21 @@ function vainsocialEmbed(title, link, command) {
 // analytics url
 function track(command) {
     return "?utm_source=discordbot&utm_medium=discord&utm_campaign=" + command;
+}
+
+// direct analytics
+function trackAction(msg, action, ign="") {
+    console.log("--------------------------------------");
+    console.log(msg.guild.id);
+    if (GOOGLEANALYTICS_ID == undefined) return;
+    const user = ua(GOOGLEANALYTICS_ID, msg.author.id,
+        { strictCidFormat: false });
+    user.pageview({
+        documentPath: action,
+        documentTitle: ign,
+        campaignSource: msg.guild.id,
+        campaignMedium: msg.guild.name
+    }).send();
 }
 
 // return the shortest version of the usage help
@@ -182,6 +199,7 @@ async function respond(msg, data, response) {
 
 // about
 module.exports.showAbout = async (msg) => {
+    trackAction(msg, "about");
     await msg.embed(vainsocialEmbed("About VainSocial", "", "about")
         .setDescription(
 `Built by the VainSocial development team using the MadGlory API.
@@ -209,6 +227,7 @@ function formatSorryUnknown(msg) {
 
 module.exports.rememberUser = async (msg, args) => {
     const ign = args.name;
+    trackAction(msg, "vainsocial-me", ign);
     await msg.guild.settings.set("remember+" + msg.author.id, ign);
     await msg.reply(
 `You are now able to use ${usg(msg, "v")} to access your profile faster.`);
@@ -220,6 +239,7 @@ module.exports.showUser = async (msg, args) => {
         response,
         ign = args.name,
         reactionsAdded = false;
+    trackAction(msg, "vainsocial-user", ign);
 
     // shorthand
     // "?" is not accepted as user input, but the default for empty
@@ -269,10 +289,14 @@ ${emoji.symbols["1234"]} or ${usg(msg, "vh " + ign)} for more*`
                 while (true) {
                     let rmoji = await reactionWaiter.next();
                     if (rmoji == undefined) break;  // timeout
-                    if (rmoji == emoji.symbols.information_source)
+                    if (rmoji == emoji.symbols.information_source) {
+                        trackAction(msg, "reaction-match", ign);
                         await respondMatch(msg, ign, matches.data[0].match_api_id);
-                    if (rmoji == emoji.symbols["1234"])
+                    }
+                    if (rmoji == emoji.symbols["1234"]) {
+                        trackAction(msg, "reaction-matches", ign);
                         await respondMatches(msg, ign);
+                    }
                 }
             })();  // async in background
         }
@@ -299,6 +323,7 @@ module.exports.showMatch = async (msg, args) => {
     let responded = false,
         ign = args.name,
         response;
+    trackAction(msg, "vainsocial-match", ign);
 
     // shorthand
     if (ign == "?") {
@@ -360,6 +385,7 @@ Last ${matches_num} casual and ranked matches.
             if (rmoji == undefined) break;  // timeout
             let idx = count.indexOf(rmoji);
             await respondMatch(msg, ign, matches[idx].match_api_id);
+            trackAction(msg, "reaction-match", ign);
         }
     })();  // async in background
     return response;
@@ -369,6 +395,7 @@ module.exports.showMatches = async (msg, args) => {
     let ign = args.name,
         responded = false,
         response;
+    trackAction(msg, "vainsocial-matches", ign);
 
     // shorthand
     if (ign == "?") {

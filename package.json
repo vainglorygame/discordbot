@@ -21,6 +21,7 @@
     "request-promise": "^4.2.0",
     "request-promise-native": "^1.0.3",
     "sqlite": "^2.5.0",
+    "universal-analytics": "^0.4.13",
     "uws": "^0.14.1",
     "webstomp": "0.0.10",
     "webstomp-client": "^1.0.6",
