@@ -83,7 +83,7 @@ async function formatMatchDetail(match) {
     let strings = [];
     for(let roster of match.rosters) {
         let winstr = "Won";
-        if (!participant.winner) winstr = "Lost";
+        if (!roster.winner) winstr = "Lost";
         let rosterstr = `${roster.side} - \`${roster.hero_kills}\` Kills - ${winstr}`;
         let teamstr = "";
         for(let participant of roster.participants) {
