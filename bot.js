@@ -2,7 +2,7 @@
 /* jshint esnext:true */
 "use strict";
 
-const PREVIEW = process.env.PREVIEW || true;
+const PREVIEW = process.env.PREVIEW != "false";
 
 const sqlite = require("sqlite"),
     path = require("path"),

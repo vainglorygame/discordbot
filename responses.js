@@ -11,7 +11,7 @@ const Commando = require("discord.js-commando"),
     Channel = require("async-csp").Channel,
     api = require("./api");
 
-const PREVIEW = process.env.PREVIEW || true,
+const PREVIEW = process.env.PREVIEW != "false",
     MATCH_HISTORY_LEN = parseInt(process.env.MATCH_HISTORY_LEN) || 3,
     IGN_ROTATE_TIMEOUT = parseInt(process.env.IGN_ROTATE_TIMEOUT) || 300,
     REACTION_TIMEOUT = parseInt(process.env.REACTION_TIMEOUT) || 60,  // s
