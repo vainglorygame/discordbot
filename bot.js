@@ -6,6 +6,8 @@ const PREVIEW = process.env.PREVIEW || true;
 
 const sqlite = require("sqlite"),
     path = require("path"),
+    winston = require("winston"),
+    loggly = require("winston-loggly-bulk"),
     Commando = require("discord.js-commando"),
     oneLine = require("common-tags").oneLine,
     client = new Commando.Client({
@@ -17,43 +19,61 @@ const sqlite = require("sqlite"),
     }),
     responses = require("./responses");
 
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN,
+    LOGGLY_TOKEN = process.env.LOGGLY_TOKEN;
+
+const logger = new (winston.Logger)({
+    transports: [
+        new (winston.transports.Console)({
+            timestamp: true,
+            colorize: true
+        })
+    ]
+});
+
+if (LOGGLY_TOKEN)
+    logger.add(winston.transports.Loggly, {
+        inputToken: LOGGLY_TOKEN,
+        subdomain: "kvahuja",
+        tags: ["frontend", "discordbot"],
+        json: true
+    });
 
 client
-    .on("error", console.error)
-    .on("warn", console.warn)
-    .on("debug", console.log)
+    .on("error", logger.error)
+    .on("warn", logger.warn)
+    .on("debug", logger.info)
     .on("ready", () => {
-        console.log(`Client ready; logged in as ${client.user.username}#${client.user.discriminator} (${client.user.id})`);
+        logger.info(`Client ready; logged in as ${client.user.username}#${client.user.discriminator} (${client.user.id})`);
         responses.rotateGameStatus(client);
     })
-    .on('disconnect', () => { console.warn('Disconnected!'); })
-    .on('reconnecting', () => { console.warn('Reconnecting...'); })
+    .on('disconnect', () => { logger.warn('Disconnected!'); })
+    .on('reconnecting', () => { logger.warn('Reconnecting...'); })
     .on('commandError', (cmd, err) => {
         if(err instanceof Commando.FriendlyError) return;
-        console.error(`Error in command ${cmd.groupID}:${cmd.memberName}`, err);
+        logger.error(`Error in command ${cmd.groupID}:${cmd.memberName}`, err);
     })
     .on('commandBlocked', (msg, reason) => {
-        console.log(oneLine`
+        logger.info(oneLine`
             Command ${msg.command ? `${msg.command.groupID}:${msg.command.memberName}` : ''}
             blocked; ${reason}
         `);
     })
     .on('commandPrefixChange', (guild, prefix) => {
-        console.log(oneLine`
+        logger.info(oneLine`
             Prefix ${prefix === '' ? 'removed' : `changed to ${prefix || 'the default'}`}
             ${guild ? `in guild ${guild.name} (${guild.id})` : 'globally'}.
         `);
     })
     .on('commandStatusChange', (guild, command, enabled) => {
-        console.log(oneLine`
+        logger.info(oneLine`
             Command ${command.groupID}:${command.memberName}
             ${enabled ? 'enabled' : 'disabled'}
             ${guild ? `in guild ${guild.name} (${guild.id})` : 'globally'}.
-    `);
+        `);
     })
     .on('groupStatusChange', (guild, group, enabled) => {
-        console.log(oneLine`
+        logger.info(oneLine`
             Group ${group.id}
             ${enabled ? 'enabled' : 'disabled'}
             ${guild ? `in guild ${guild.name} (${guild.id})` : 'globally'}.
@@ -78,5 +98,5 @@ client.registry
 client.login(DISCORD_TOKEN);
 
 process.on("unhandledRejection", err => {
-    console.error("Uncaught Promise Error: \n" + err.stack);
+    logger.error("Uncaught Promise Error", err);
 });

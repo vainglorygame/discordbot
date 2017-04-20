@@ -38,8 +38,6 @@ function track(command) {
 
 // direct analytics
 function trackAction(msg, action, ign="") {
-    console.log("--------------------------------------");
-    console.log(msg.guild.id);
     if (GOOGLEANALYTICS_ID == undefined) return;
     const user = ua(GOOGLEANALYTICS_ID, msg.author.id,
         { strictCidFormat: false });
