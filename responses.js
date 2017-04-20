@@ -82,7 +82,9 @@ Score | ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * par
 async function formatMatchDetail(match) {
     let strings = [];
     for(let roster of match.rosters) {
-        let rosterstr = `${roster.side} - \`${roster.hero_kills}\` Kills`;
+        let winstr = "Won";
+        if (!participant.winner) winstr = "Lost";
+        let rosterstr = `${roster.side} - \`${roster.hero_kills}\` Kills - ${winstr}`;
         let teamstr = "";
         for(let participant of roster.participants) {
             const hero = await api.mapActor(participant.actor);
