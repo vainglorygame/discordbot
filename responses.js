@@ -308,7 +308,7 @@ async function respondMatch(msg, ign, id, response=undefined) {
     const match = await api.getMatch(id);
 
     let embed = vainsocialEmbed(`${match.game_mode}, ${match.duration} minutes`,
-        ign + "/" + id, "vainsocial-match")
+        "player/" + ign + "/match/" + id, "vainsocial-match")
         .setTimestamp(new Date(match.created_at));
     (await formatMatchDetail(match)).forEach(([title, text]) => {
         embed.addField(title, text, true);
