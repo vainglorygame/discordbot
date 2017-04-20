@@ -87,7 +87,7 @@ async function formatMatchDetail(match) {
         for(let participant of roster.participants) {
             const hero = await api.mapActor(participant.actor);
             teamstr += `
-\`${hero}\`, [${participant.player.name}](${ROOTURL}player/${participant.player.name}${track("match-detail")}) \`T${Math.floor(participant.skill_tier/3)}\` | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.floor(participant.stats.farm)}\`, Score ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\``;
+\`${hero}\`, [${participant.player.name}](${ROOTURL}player/${participant.player.name}${track("match-detail")}) \`T${Math.floor(participant.skill_tier/3+1)}\` | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.floor(participant.stats.farm)}\`, Score ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\``;
         }
         strings.push([rosterstr, teamstr]);
     }
