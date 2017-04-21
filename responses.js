@@ -150,11 +150,16 @@ module.exports.onNewReaction = (reaction) => {
 // the Promise result is the reaction name
 function awaitReactions(message, emoji, timeout=REACTION_TIMEOUT) {
     const pipeOut = new Channel();
+    let reactions = [];
     // stop listening after timeout
-    setTimeout(() => pipeOut.close(), timeout*1000);
+    setTimeout(() => {
+        pipeOut.close();
+        Promise.map(reactions, async (r) => r.remove());
+    }, timeout*1000);
 
+    // async in background
     Promise.each(emoji, async (em) =>
-        message.react(em));  // async in background
+        reactions.push(await message.react(em)));
 
     let reaction;
     reactionsPipe.pipe(pipeOut);
