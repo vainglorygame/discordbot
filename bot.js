@@ -47,7 +47,10 @@ client
         logger.info(`Client ready; logged in as ${client.user.username}#${client.user.discriminator} (${client.user.id})`);
         responses.rotateGameStatus(client);
     })
-    .on('disconnect', () => { logger.warn('Disconnected!'); })
+    .on('disconnect', () => {
+        logger.warn('Disconnected!');
+        process.exit(1);  // make pm2 restart bot
+    })
     .on('reconnecting', () => { logger.warn('Reconnecting...'); })
     .on('commandError', (cmd, err) => {
         if(err instanceof Commando.FriendlyError) return;
