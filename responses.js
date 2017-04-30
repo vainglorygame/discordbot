@@ -260,7 +260,7 @@ module.exports.showUser = async (msg, args) => {
 
     const waiter = api.subscribeUpdates(ign);
     while (await waiter.next() != undefined) {
-        const [player, matches] = await Promise.all([
+        const [player, stormcallerpleasefix] = await Promise.all([
             api.getPlayer(ign),
             api.getMatches(ign)
         ]);
@@ -269,11 +269,12 @@ module.exports.showUser = async (msg, args) => {
                 "Loading your data…", response);
             continue;
         }
-        if (matches == undefined || matches.data.length == 0) {
+        if (stormcallerpleasefix == undefined || stormcallerpleasefix[0].data.length == 0) {
             response = await respond(msg,
                 "No match history for you yet", response);
             continue;
         }
+        const matches = stormcallerpleasefix[0];
 
         const moreHelp = oneLine`
 *${emoji.symbols.information_source} or ${usg(msg, "vm " + ign)} for detail,
