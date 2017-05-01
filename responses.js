@@ -260,7 +260,7 @@ module.exports.showUser = async (msg, args) => {
 
     const waiter = api.subscribeUpdates(ign);
     while (await waiter.next() != undefined) {
-        const [player, stormcallerpleasefix] = await Promise.all([
+        const [player, data] = await Promise.all([
             api.getPlayer(ign),
             api.getMatches(ign)
         ]);
@@ -269,12 +269,12 @@ module.exports.showUser = async (msg, args) => {
                 "Loading your data…", response);
             continue;
         }
-        if (stormcallerpleasefix == undefined || stormcallerpleasefix[0].data.length == 0) {
+        if (data == undefined || data[0].data.length == 0) {
             response = await respond(msg,
                 "No match history for you yet", response);
             continue;
         }
-        const matches = stormcallerpleasefix[0];
+        const matches = data[0];
 
         const moreHelp = oneLine`
 *${emoji.symbols.information_source} or ${usg(msg, "vm " + ign)} for detail,
@@ -344,12 +344,13 @@ module.exports.showMatch = async (msg, args) => {
 
     const waiter = api.subscribeUpdates(ign);
     while (await waiter.next() != undefined) {
-        let matches = await api.getMatches(ign);
-        if (matches == undefined || matches.data.length == 0) {
+        const data = await api.getMatches(ign);
+        if (data == undefined || data[0].data.length == 0) {
             response = await respond(msg, "No matches for you yet",
                 response);
             continue;
         }
+        const matches = data[0];
         if (index - 1 > matches.data.length) {
             response = await respond(msg, "Not enough matches yet",
                 response);
@@ -416,12 +417,13 @@ module.exports.showMatches = async (msg, args) => {
 
     const waiter = api.subscribeUpdates(ign);
     while (await waiter.next() != undefined) {
-        let matches = await api.getMatches(ign);
-        if (matches == undefined || matches.data.length == 0) {
+        const data = await api.getMatches(ign);
+        if (data == undefined || data[0].data.length == 0) {
             response = await respond(msg, "No matches for you yet",
                 response);
             continue;
         }
+        const matches = data[0];
         response = await respondMatches(msg, ign, response);
         responded = true;
     }
