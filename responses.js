@@ -129,14 +129,12 @@ ${picks}
 
 module.exports.rotateGameStatus = (client) => {
     (async function rotate() {
-        /*
         const gamers = await api.getGamers(),
             idx = Math.floor(Math.random() * (gamers.length - 1)) + 1;
         if (PREVIEW) await client.user.setGame(
             `?v ${gamers[idx]} | preview.vainsocial.com`);
         else await client.user.setGame(
             `!v ${gamers[idx]} | vainsocial.com`);
-        */
         setTimeout(rotate, IGN_ROTATE_TIMEOUT * 1000);
     })();
 }
