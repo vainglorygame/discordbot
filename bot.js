@@ -17,7 +17,8 @@ const sqlite = require("sqlite"),
         invite: "https://discord.gg/txTchJY",
         unknownCommandResponse: false
     }),
-    responses = require("./responses");
+    responses = require("./responses"),
+    util = require("./util");
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN,
     LOGGLY_TOKEN = process.env.LOGGLY_TOKEN;
@@ -81,7 +82,7 @@ client
     })
 
     // response reaction interface
-    .on("messageReactionAdd", responses.onNewReaction);
+    .on("messageReactionAdd", util.onNewReaction);
 
 client.setProvider(
     sqlite.open(path.join(__dirname, "settings.sqlite3")).then(
@@ -89,6 +90,7 @@ client.setProvider(
 
 client.registry
     .registerGroup('vainsocial', 'VainSocial')
+    .registerGroup('vainsocial-guild', 'VainSocial Guild management')
     .registerDefaultTypes()
     .registerDefaultGroups()
     .registerDefaultCommands({ eval_: false, commandState: false })

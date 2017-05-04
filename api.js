@@ -2,7 +2,7 @@
 /* jshint esnext:true */
 "use strict";
 
-const request = require("request-promise-native"),
+const request = require("request-promise"),
     Promise = require("bluebird"),
     WebSocket = require("ws"),
     webstomp = require("webstomp-client"),
@@ -16,7 +16,7 @@ let cache = cacheManager.caching({
 
 const UPDATE_TIMEOUT = parseInt(process.env.UPDATE_TIMEOUT) || 60;  // s
 
-const API_FE_URL = process.env.API_FE_URL || "http://vainsocial.dev/bots/api",
+const API_FE_URL = process.env.API_FE_URL || "http://vainsocial.dev/bot/api",
       API_MAP_URL = process.env.API_MAP_URL || "http://vainsocial.dev/masters/",
       API_WS_URL = process.env.API_WS_URL || "ws://vainsocial.dev/ws",
       API_BE_URL = process.env.API_BE_URL || "http://vainsocial.dev/bridge";
@@ -113,14 +113,9 @@ module.exports.subscribeUpdates = function(name, timeout=UPDATE_TIMEOUT) {
 
     let msg;
     return { next: async function () {
-        if (this._first) {
-            this._first = false;
-            await postBE("/player/" + name + "/update");
-            return true;
-        }
         do {
             msg = await channel.take();
-        } while([Channel.DONE, "initial", "search_fail",
+        } while([Channel.DONE, "search_fail", "search_success",
             "stats_update", "matches_update"].indexOf(msg) == -1);
         // bust caches
         if (["stats_update"].indexOf(msg) != -1)
@@ -133,8 +128,18 @@ module.exports.subscribeUpdates = function(name, timeout=UPDATE_TIMEOUT) {
             subscription.unsubscribe();
             return undefined;
         }
-        return true;
-    }, _first: true };
+        return msg;
+    } };
+}
+
+// search an unknown player
+module.exports.searchPlayer = async function(name) {
+    return await postBE("/player/" + name + "/search");
+}
+
+// update a known player
+module.exports.updatePlayer = async function(name) {
+    return await postBE("/player/" + name + "/update");
 }
 
 // return player

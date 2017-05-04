@@ -3,57 +3,16 @@
 "use strict";
 
 const Commando = require("discord.js-commando"),
-    Discord = require("discord.js"),
     Promise = require("bluebird"),
-    ua = require("universal-analytics"),
     emoji = require("discord-emoji"),
     oneLine = require("common-tags").oneLine,
-    Channel = require("async-csp").Channel,
+    util = require("./util"),
     api = require("./api");
 
 const PREVIEW = process.env.PREVIEW != "false",
     MATCH_HISTORY_LEN = parseInt(process.env.MATCH_HISTORY_LEN) || 3,
     IGN_ROTATE_TIMEOUT = parseInt(process.env.IGN_ROTATE_TIMEOUT) || 300,
-    REACTION_TIMEOUT = parseInt(process.env.REACTION_TIMEOUT) || 60,  // s
-    GOOGLEANALYTICS_ID = process.env.GOOGLEANALYTICS_ID,
     ROOTURL = (PREVIEW? "https://preview.vainsocial.com/":"https://vainsocial.com/");
-
-const reactionsPipe = new Channel();
-
-// embed template
-function vainsocialEmbed(title, link, command) {
-    return new Discord.RichEmbed()
-        .setTitle(title)
-        .setColor("#55ADD3")
-        .setURL(ROOTURL + link + track(command))
-        .setAuthor("VainSocial" + (PREVIEW? " preview":""), ROOTURL + "images/brands/logo-blue.png",
-            ROOTURL + track(command))
-        .setFooter("VainSocial" + (PREVIEW? " preview":""), ROOTURL + "images/brands/logo-blue.png")
-}
-
-// analytics url
-function track(command) {
-    return "?utm_source=discordbot&utm_medium=discord&utm_campaign=" + command;
-}
-
-// direct analytics
-function trackAction(msg, action, ign="") {
-    if (GOOGLEANALYTICS_ID == undefined) return;
-    const user = ua(GOOGLEANALYTICS_ID, msg.author.id,
-        { strictCidFormat: false });
-    user.pageview({
-        documentPath: action,
-        documentTitle: ign,
-        campaignSource: msg.guild.id,
-        campaignMedium: msg.guild.name
-    }).send();
-}
-
-// return the shortest version of the usage help
-// just '?vm'
-function usg(msg, cmd) {
-    return msg.anyUsage(cmd, undefined, null);
-}
 
 // based on impact score float, return an Emoji
 function emojifyScore(score) {
@@ -89,7 +48,7 @@ async function formatMatchDetail(match) {
         for(let participant of roster.participants) {
             const hero = await api.mapActor(participant.actor);
             teamstr += `
-\`${hero}\`, [${participant.player.name}](${ROOTURL}player/${participant.player.name}${track("match-detail")}) \`T${Math.floor(participant.skill_tier/3+1)}\` | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.floor(participant.stats.farm)}\`, Score ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\``;
+\`${hero}\`, [${participant.player.name}](${ROOTURL}player/${participant.player.name}${util.track("match-detail")}) \`T${Math.floor(participant.skill_tier/3+1)}\` | \`${participant.stats.kills}/${participant.stats.deaths}/${participant.stats.assists}\`, \`${Math.floor(participant.stats.farm)}\`, Score ${emojifyScore(participant.stats.impact_score)} \`${Math.floor(100 * participant.stats.impact_score)}%\``;
         }
         strings.push([rosterstr, teamstr]);
     }
@@ -139,78 +98,15 @@ module.exports.rotateGameStatus = (client) => {
     })();
 }
 
-// reaction -> pipe ->>> consumers
-// handle new reaction event
-module.exports.onNewReaction = (reaction) => {
-    if (reaction.users.array().length <= 1) return;  // was me TODO
-    reactionsPipe.put(reaction);
-}
-
-// create an iterator that returns promises to await new reactions
-// the Promise result is the reaction name
-function awaitReactions(message, emoji, timeout=REACTION_TIMEOUT) {
-    const pipeOut = new Channel();
-    let reactions = [];
-    // stop listening after timeout
-    setTimeout(() => {
-        pipeOut.close();
-        Promise.map(reactions, async (r) => r.remove());
-    }, timeout*1000);
-
-    // async in background
-    Promise.each(emoji, async (em) =>
-        reactions.push(await message.react(em)));
-
-    let reaction;
-    reactionsPipe.pipe(pipeOut);
-    return {
-        next: async function() {
-            do {
-                reaction = await pipeOut.take();
-                if (reaction == Channel.DONE)
-                    return undefined;
-            } while (reaction.message.id != message.id ||
-                emoji.indexOf(reaction.emoji.name) == -1);
-            return reaction.emoji.name;
-        }
-    }
-}
-
-// respond or say text or embed
-async function respond(msg, data, response) {
-    if (response == undefined) {
-        if (typeof data === "string") {
-            response = await msg.say(data);
-        } else {
-            response = await msg.embed(data);
-        }
-    } else {
-        if (typeof data === "string") {
-            if (data != response.content)
-                await response.edit(data);
-        } else {
-            if (new Date(response.embeds[0].createdTimestamp).getTime()
-                != data.timestamp.getTime())
-                // TODO how2 edit embed properly?!
-                await msg.editResponse(response, {
-                    type: "plain",
-                    content: "",
-                    options: { embed: data }
-                });
-        }
-    }
-    return response;
-}
-
 // about
 module.exports.showAbout = async (msg) => {
-    trackAction(msg, "about");
-    await msg.embed(vainsocialEmbed("About VainSocial", "", "about")
+    util.trackAction(msg, "about");
+    await msg.embed(util.vainsocialEmbed("About VainSocial", "", "about")
         .setDescription(
 `Built by the VainSocial development team using the MadGlory API.
 Currently running on ${msg.client.guilds.size} servers.`)
         .addField("Website",
-            ROOTURL + track("about"), true)
+            ROOTURL + util.track("about"), true)
         .addField("Bot invite link",
             "https://discordapp.com/oauth2/authorize?&client_id=287297889024213003&scope=bot&permissions=52288", true)
         .addField("Developer Discord invite",
@@ -222,20 +118,8 @@ Currently running on ${msg.client.guilds.size} servers.`)
 
 // return the sqlite stored ign for this user
 function nameByUser(msg) {
-    return msg.guild.settings.get("remember+" + msg.author.id);
-}
-
-// tell the user that they need to store their name
-function formatSorryUnknown(msg) {
-    return `You're unknown to our service. Try ${usg(msg, "help vme")}.`;
-}
-
-module.exports.rememberUser = async (msg, args) => {
-    const ign = args.name;
-    trackAction(msg, "vainsocial-me", ign);
-    await msg.guild.settings.set("remember+" + msg.author.id, ign);
-    await msg.reply(
-`You are now able to use ${usg(msg, "v")} to access your profile faster.`);
+    throw "nope that's not possible yet";
+    //return msg.guild.settings.get("remember+" + msg.author.id);
 }
 
 // show player profile and last match
@@ -244,84 +128,90 @@ module.exports.showUser = async (msg, args) => {
         response,
         ign = args.name,
         reactionsAdded = false;
-    trackAction(msg, "vainsocial-user", ign);
+    util.trackAction(msg, "vainsocial-user", ign);
 
     // shorthand
     // "?" is not accepted as user input, but the default for empty
     if (ign == "?") {
         ign = nameByUser(msg);
         if (ign == undefined) {
-            await msg.reply(formatSorryUnknown(msg));
+            await msg.reply(util.formatSorryUnknown(msg));
             return;
         }
     }
 
+    // TODO refactor the update flow a bit
+    // trigger backend
+    if (await api.getPlayer(ign) == undefined)
+        await api.searchPlayer(ign);
+    else await api.updatePlayer(ign);
+
     const waiter = api.subscribeUpdates(ign);
-    while (await waiter.next() != undefined) {
+    do {
         const [player, data] = await Promise.all([
             api.getPlayer(ign),
             api.getMatches(ign)
         ]);
         if (player == undefined) {
-            response = await respond(msg,
+            response = await util.respond(msg,
                 "Loading your data…", response);
             continue;
         }
         if (data == undefined || data[0].data.length == 0) {
-            response = await respond(msg,
+            response = await util.respond(msg,
                 "No match history for you yet", response);
             continue;
         }
         const matches = data[0];
 
         const moreHelp = oneLine`
-*${emoji.symbols.information_source} or ${usg(msg, "vm " + ign)} for detail,
-${emoji.symbols["1234"]} or ${usg(msg, "vh " + ign)} for more*`
+*${emoji.symbols.information_source} or ${util.usg(msg, "vm " + ign)} for detail,
+${emoji.symbols["1234"]} or ${util.usg(msg, "vh " + ign)} for more*`
 
-        const embed = vainsocialEmbed(`${ign} - ${player.shard_id}`, "player/" + ign, "vainsocial-user")
+        const embed = util.vainsocialEmbed(`${ign} - ${player.shard_id}`, "player/" + ign, "vainsocial-user")
             .setThumbnail(ROOTURL + "images/game/skill_tiers/" +
                 matches.data[0].skill_tier + ".png")
             .setDescription("")
             .addField("Profile", await formatPlayer(player), true)
             .addField("Last match", await formatMatch(matches.data[0]) + moreHelp, true)
             .setTimestamp(new Date(matches.data[0].created_at));
-        response = await respond(msg, embed, response);
+        response = await util.respond(msg, embed, response);
 
         if (!reactionsAdded) {
             reactionsAdded = true;
-            let reactionWaiter = awaitReactions(response,
+            let reactionWaiter = util.awaitReactions(response,
                 [emoji.symbols.information_source, emoji.symbols["1234"]]);
             (async () => {
                 while (true) {
                     let rmoji = await reactionWaiter.next();
                     if (rmoji == undefined) break;  // timeout
                     if (rmoji == emoji.symbols.information_source) {
-                        trackAction(msg, "reaction-match", ign);
+                        util.trackAction(msg, "reaction-match", ign);
                         await respondMatch(msg, ign, matches.data[0].match_api_id);
                     }
                     if (rmoji == emoji.symbols["1234"]) {
-                        trackAction(msg, "reaction-matches", ign);
+                        util.trackAction(msg, "reaction-matches", ign);
                         await respondMatches(msg, ign);
                     }
                 }
             })();  // async in background
         }
-    }
+    } while (await waiter.next() != undefined);
     if (!reactionsAdded)
-        await respond(msg, `Could not find \`${ign}\`.`, response);
+        await util.respond(msg, `Could not find \`${ign}\`.`, response);
 }
 
 // show match in detail
 async function respondMatch(msg, ign, id, response=undefined) {
     const match = await api.getMatch(id);
 
-    let embed = vainsocialEmbed(`${match.game_mode}, ${match.duration} minutes`,
+    let embed = util.vainsocialEmbed(`${match.game_mode}, ${match.duration} minutes`,
         "player/" + ign + "/match/" + id, "vainsocial-match")
         .setTimestamp(new Date(match.created_at));
     (await formatMatchDetail(match)).forEach(([title, text]) => {
         embed.addField(title, text, true);
     });
-    return await respond(msg, embed, response);
+    return await util.respond(msg, embed, response);
 }
 
 module.exports.showMatch = async (msg, args) => {
@@ -329,37 +219,42 @@ module.exports.showMatch = async (msg, args) => {
     let responded = false,
         ign = args.name,
         response;
-    trackAction(msg, "vainsocial-match", ign);
+    util.trackAction(msg, "vainsocial-match", ign);
 
     // shorthand
     if (ign == "?") {
         ign = nameByUser(msg);
         if (ign == undefined) {
-            await msg.reply(formatSorryUnknown(msg));
+            await msg.reply(util.formatSorryUnknown(msg));
             return;
         }
     }
 
+    // trigger backend
+    if (await api.getPlayer(ign) == undefined)
+        await api.searchPlayer(ign);
+    else await api.updatePlayer(ign);
+
     const waiter = api.subscribeUpdates(ign);
-    while (await waiter.next() != undefined) {
+    do {
         const data = await api.getMatches(ign);
         if (data == undefined || data[0].data.length == 0) {
-            response = await respond(msg, "No matches for you yet",
+            response = await util.respond(msg, "No matches for you yet",
                 response);
             continue;
         }
         const matches = data[0];
         if (index - 1 > matches.data.length) {
-            response = await respond(msg, "Not enough matches yet",
+            response = await util.respond(msg, "Not enough matches yet",
                 response);
             continue;
         }
         let id = matches.data[index -1].match_api_id;
         response = await respondMatch(msg, ign, id, response);
         responded = true;
-    }
+    } while (await waiter.next() != undefined);
     if (!responded)
-        await respond(msg, `Could not find \`${ign}\`.`, response);
+        await util.respond(msg, `Could not find \`${ign}\`.`, response);
 }
 
 // show match history
@@ -373,18 +268,18 @@ async function respondMatches(msg, ign, response=undefined) {
         matches = data[0].data.slice(0, MATCH_HISTORY_LEN),  // TODO
         matches_num = matches.length;
 
-    let embed = vainsocialEmbed(ign, "player/" + ign, "vainsocial-matches")
+    let embed = util.vainsocialEmbed(ign, "player/" + ign, "vainsocial-matches")
         .setDescription(`
 Last ${matches_num} casual and ranked matches.
-*${emoji.symbols["1234"]} or ${usg(msg, "vm " + ign + " number")} for details*
+*${emoji.symbols["1234"]} or ${util.usg(msg, "vm " + ign + " number")} for details*
         `)
         .setTimestamp(new Date(matches[0].created_at));
     await Promise.each(matches, async (match, idx) =>
         embed.addField(`Match ${idx + 1}`, await formatMatch(match))
     );
-    response = await respond(msg, embed, response);
+    response = await util.respond(msg, embed, response);
 
-    const reactionWaiter = awaitReactions(response,
+    const reactionWaiter = util.awaitReactions(response,
         count.slice(0, matches_num));
     (async () => {
         while (true) {
@@ -392,7 +287,7 @@ Last ${matches_num} casual and ranked matches.
             if (rmoji == undefined) break;  // timeout
             let idx = count.indexOf(rmoji);
             await respondMatch(msg, ign, matches[idx].match_api_id);
-            trackAction(msg, "reaction-match", ign);
+            util.trackAction(msg, "reaction-match", ign);
         }
     })();  // async in background
     return response;
@@ -402,30 +297,35 @@ module.exports.showMatches = async (msg, args) => {
     let ign = args.name,
         responded = false,
         response;
-    trackAction(msg, "vainsocial-matches", ign);
+    util.trackAction(msg, "vainsocial-matches", ign);
 
     // shorthand
     if (ign == "?") {
         ign = nameByUser(msg);
         if (ign == undefined) {
-            await msg.reply(formatSorryUnknown(msg));
+            await msg.reply(util.formatSorryUnknown(msg));
             return;
         }
     }
 
+    // trigger backend
+    if (await api.getPlayer(ign) == undefined)
+        await api.searchPlayer(ign);
+    else await api.updatePlayer(ign);
+
     const waiter = api.subscribeUpdates(ign);
-    while (await waiter.next() != undefined) {
+    do {
         const data = await api.getMatches(ign);
         if (data == undefined || data[0].data.length == 0) {
-            response = await respond(msg, "No matches for you yet",
+            response = await util.respond(msg, "No matches for you yet",
                 response);
             continue;
         }
         const matches = data[0];
         response = await respondMatches(msg, ign, response);
         responded = true;
-    }
+    } while (await waiter.next() != undefined);
     if (!responded)
-        await respond(msg, `Could not find \`${ign}\`.`,
+        await util.respond(msg, `Could not find \`${ign}\`.`,
             response);
 }
