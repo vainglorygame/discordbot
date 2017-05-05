@@ -11,7 +11,7 @@ module.exports = class CalculateGuildFameCommand extends Commando.Command {
     constructor(client) {
         super(client, {
             name: "vainsocial-guildcalc",
-            aliases: ["vguild-calc", "vgcalc", "vgc"],
+            aliases: ["vguild-calc", "vgcalc"],
             group: "vainsocial-guild",
             memberName: "vainsocial-guildcalc",
             description: "Update your Guild's fame.",

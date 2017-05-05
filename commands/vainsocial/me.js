@@ -34,10 +34,26 @@ Store your in game name for quicker access to other commands and for Guild manag
     async run(msg, args) {
         const ign = args.name;
         util.trackAction(msg, "vainsocial-me", ign);
-        await api.post("/user", {
-            name: ign,
-            user_token: msg.author.id
-        });
+        const player = await api.getPlayer(ign);
+        // TODO refactor and build a blocking function via processor
+        // TODO respond loading
+        if (player == undefined) {
+            const waiter = api.subscribeUpdates(ign);
+            await api.searchPlayer(ign);
+
+            let success = false, notif;
+            // wait until search success
+            while (true) {
+                notif = await waiter.next();
+                if (notif == "stats_update") break;
+                if (notif == undefined) {
+                    // give up
+                    await progress(`Ooops! Could not find ${user}.`, true);
+                    return;
+                }
+            }
+        }
+        await api.setUser(msg.author.id, ign);
         await msg.reply(oneLine`
 You are now able to use ${util.usg(msg, "v")} to access your profile faster.
 You now have access to Guild management features.

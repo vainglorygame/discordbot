@@ -50,7 +50,7 @@ Register IGNs to your Guild.
                 // wait until search success
                 while (true) {
                     notif = await waiter.next();
-                    if (notif == "search_success") break;
+                    if (notif == "stats_update") break;
                     if (notif == undefined) {
                         // give up
                         await progress(`Ooops! Could not find ${user}.`, true);

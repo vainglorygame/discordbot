@@ -116,13 +116,6 @@ Currently running on ${msg.client.guilds.size} servers.`)
     );
 }
 
-// return the sqlite stored ign for this user
-async function nameByUser(msg) {
-    const user = await api.get("/user", { user_token: msg.author.id });
-    if (user) return user.name;
-    return undefined;
-}
-
 // show player profile and last match
 module.exports.showUser = async (msg, args) => {
     let responded = false,
@@ -134,7 +127,7 @@ module.exports.showUser = async (msg, args) => {
     // shorthand
     // "?" is not accepted as user input, but the default for empty
     if (ign == "?") {
-        ign = await nameByUser(msg);
+        ign = await api.getUser(msg.author.id);
         if (ign == undefined) {
             await msg.reply(util.formatSorryUnknown(msg));
             return;
@@ -214,7 +207,7 @@ module.exports.showMatch = async (msg, args) => {
 
     // shorthand
     if (ign == "?") {
-        ign = await nameByUser(msg);
+        ign = await api.getUser(msg.author.id);
         if (ign == undefined) {
             await msg.reply(util.formatSorryUnknown(msg));
             return;
@@ -288,7 +281,7 @@ module.exports.showMatches = async (msg, args) => {
 
     // shorthand
     if (ign == "?") {
-        ign = await nameByUser(msg);
+        ign = await api.getUser(msg.author.id);
         if (ign == undefined) {
             await msg.reply(util.formatSorryUnknown(msg));
             return;

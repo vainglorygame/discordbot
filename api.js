@@ -170,7 +170,7 @@ module.exports.upsearchPlayer = async (name) => {
 
 // return matches
 module.exports.getMatches = async (name) => {
-    const data = await getFE("/player/" + name + "/matches/2.3.1.1", {},
+    const data = await getFE("/player/" + name + "/matches/1.1.1.1", {},
         60 * 60, "matches+" + name);
     if (data == undefined) return [];
     return data[0].data;
@@ -211,3 +211,16 @@ module.exports.calculateGuild = async (id, token) => {
     if (msg == "points_update") cache.del("guild+" + token);
     subscription.unsubscribe();
 }
+
+// store Discord ID <-> IGN
+module.exports.setUser = async (token, name) => {
+    cache.del("user+" + token);
+    await module.exports.post("/user", {
+        name: name,
+        user_token: token
+    });
+}
+
+// retrieve Discord ID -> IGN
+module.exports.getUser = async (token) =>
+    (await getFE("/user", { user_token: token }, 60, "user+" + token)).name;

@@ -114,6 +114,5 @@ module.exports.respond = async (msg, data, response) => {
 };
 
 // tell the user that they need to store their name
-module.exports.formatSorryUnknown = (msg) => {
-    return `You're unknown to our service. Try ${util.usg(msg, "help vme")}.`;
-};
+module.exports.formatSorryUnknown = (msg) =>
+    `You're unknown to our service. Try ${module.exports.usg(msg, "help vme")}.`;
