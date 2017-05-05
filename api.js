@@ -39,13 +39,32 @@ function getMap(url) {
     });
 }
 
-function getFE(url) {
-    return request({
-        uri: API_FE_URL + url,
+async function getFE(url, params={}, ttl=60, cachekey=undefined) {
+    if (cachekey == undefined) cachekey = url + JSON.stringify(params);
+    return await cache.wrap(cachekey, async () => {
+        try {
+            return await request({
+                uri: API_FE_URL + url,
+                qs: params,
+                json: true,
+                forever: true
+            });
+        } catch (err) {
+            return undefined;
+        }
+    }, { ttl: ttl });
+}
+
+async function postFE(url, params={}) {
+    return await request.post(API_FE_URL + url, {
+        form: params,
         json: true,
         forever: true
     });
 }
+
+module.exports.get = getFE;
+module.exports.post = postFE;
 
 function postBE(url) {
     return request.post({
@@ -87,35 +106,36 @@ async function getMappings() {
     }, { ttl: 60 * 30 });
 }
 
-module.exports.mapGameMode = async function(id) {
-    return (await getMappings())["gamemode"][id];
-}
+module.exports.mapGameMode = async (id) =>
+    (await getMappings())["gamemode"][id];
 
-module.exports.mapActor = async function(api_name) {
-    return (await getMappings())["hero"][api_name];
-}
+module.exports.mapActor = async (api_name) =>
+    (await getMappings())["hero"][api_name];
 
 // return a set of IGN of supporters
-module.exports.getGamers = async function() {
-    return await cache.wrap("gamers", async () => {
-        return (await getFE("/gamer")).map((gamer) => gamer.name);
-    }, { ttl: 60 * 30 });
-}
+module.exports.getGamers = async () =>
+    (await getFE("/gamer", {}, 60 * 30)).map((gamer) => gamer.name);
 
 // be an async iterator
 // next() returns promises that are awaited until there is an update
-module.exports.subscribeUpdates = function(name, timeout=UPDATE_TIMEOUT) {
+module.exports.subscribeUpdates = async (name, refresh=true, timeout=UPDATE_TIMEOUT) => {
     const channel = new Channel(),
         subscription = subscribe("player." + name, channel);
+
+    if (refresh) {
+        // trigger backend
+        if (await module.exports.getPlayer(name) == undefined)
+            await module.exports.searchPlayer(name);
+        else await module.exports.updatePlayer(name);
+    }
 
     // stop updates after timeout
     setTimeout(() => channel.close(), timeout*1000);
 
     let msg;
     return { next: async function () {
-        do {
-            msg = await channel.take();
-        } while([Channel.DONE, "search_fail", "search_success",
+        do msg = await channel.take();
+        while([Channel.DONE, "search_fail", "search_success",
             "stats_update", "matches_update"].indexOf(msg) == -1);
         // bust caches
         if (["stats_update"].indexOf(msg) != -1)
@@ -133,40 +153,25 @@ module.exports.subscribeUpdates = function(name, timeout=UPDATE_TIMEOUT) {
 }
 
 // search an unknown player
-module.exports.searchPlayer = async function(name) {
-    return await postBE("/player/" + name + "/search");
-}
+module.exports.searchPlayer = (name) =>
+    postBE("/player/" + name + "/search");
 
 // update a known player
-module.exports.updatePlayer = async function(name) {
-    return await postBE("/player/" + name + "/update");
-}
+module.exports.updatePlayer = (name) =>
+    postBE("/player/" + name + "/update");
 
 // return player
-module.exports.getPlayer = async function(name) {
-    return await cache.wrap("player+" + name, async () => {
-        try {
-            return await getFE("/player/" + name);
-        } catch (err) {
-            return undefined;
-        }
-    }, { ttl: 60 });
-}
+module.exports.getPlayer = (name) =>
+    getFE("/player/" + name, {}, 60, "player+" + name);
 
 // return matches
-module.exports.getMatches = async function(name) {
-    return await cache.wrap("matches+" + name, async () => {
-        try {
-            return await getFE("/player/" + name + "/matches/1.1.1.1");
-        } catch (err) {
-            return undefined;
-        }
-    }, { ttl: 60 });
+module.exports.getMatches = async (name) => {
+    const data = await getFE("/player/" + name + "/matches/2.3.1.1", {},
+        60 * 60, "matches+" + name);
+    if (data == undefined) return [];
+    return data[0].data;
 }
 
 // return single match
-module.exports.getMatch = async function(id) {
-    return await cache.wrap("match+" + id, async () =>
-        getFE("/match/" + id),
-    { ttl: 60 * 60 });
-}
+module.exports.getMatch = (id) =>
+    getFE("/match/" + id, {}, 60 * 60);

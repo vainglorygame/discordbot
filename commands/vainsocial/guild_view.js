@@ -4,10 +4,8 @@
 
 const Commando = require("discord.js-commando"),
     oneLine = require("common-tags").oneLine,
-    request = require("request-promise"),
+    api = require("../../api"),
     util = require("../../util");
-
-const API_FE_URL = process.env.API_FE_URL || "http://vainsocial.dev/bot/api";
 
 module.exports = class ViewGuildCommand extends Commando.Command {
     constructor(client) {
@@ -36,13 +34,7 @@ Show a summary of your Guild.
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-guild-view");
         // get this user's guild
-        const guild = await request(API_FE_URL + "/guild", {
-            forever: true,
-            json: true,
-            qs: {
-                user_token: msg.author.id
-            }
-        });
+        const guild = await api.get("/guild", { user_token: msg.author.id });
         if (guild == undefined) {
             await msg.reply("You are not registered in any guilds.");
             return;

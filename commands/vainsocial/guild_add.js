@@ -5,11 +5,8 @@
 const Commando = require("discord.js-commando"),
     oneLine = require("common-tags").oneLine,
     Promise = require("bluebird"),
-    request = require("request-promise"),
     api = require("../../api"),
     util = require("../../util");
-
-const API_FE_URL = process.env.API_FE_URL || "http://vainsocial.dev/bot/api";
 
 module.exports = class AddGuildMemberCommand extends Commando.Command {
     constructor(client) {
@@ -44,9 +41,11 @@ Register IGNs to your Guild.
             let player = await api.getPlayer(user);
             if (player == undefined) {
                 await progress(`Loading ${user}'s data into VainSocial…`);
-                // if not, wait for backend to fetch
+                // if not, wait for backend to fetch name <-> api_id
+                // - not interested in match history (hence no update),
                 const waiter = api.subscribeUpdates(user);
                 await api.searchPlayer(user);
+
                 let success = false, notif;
                 // wait until search success
                 while (true) {
@@ -63,12 +62,9 @@ Register IGNs to your Guild.
             }
 
             // all good, register to self guild
-            await request.post(API_FE_URL + "/guild/members", {
-                forever: true,
-                form: {
-                    user_token: msg.author.id,
-                    member_name: user
-                }
+            await api.post("/guild/members", {
+                user_token: msg.author.id,
+                member_name: user
             });
             await progress(`Added ${user}.`, true);
         });

@@ -117,9 +117,10 @@ Currently running on ${msg.client.guilds.size} servers.`)
 }
 
 // return the sqlite stored ign for this user
-function nameByUser(msg) {
-    throw "nope that's not possible yet";
-    //return msg.guild.settings.get("remember+" + msg.author.id);
+async function nameByUser(msg) {
+    const user = await api.get("/user", { user_token: msg.author.id });
+    if (user) return user.name;
+    return undefined;
 }
 
 // show player profile and last match
@@ -133,36 +134,24 @@ module.exports.showUser = async (msg, args) => {
     // shorthand
     // "?" is not accepted as user input, but the default for empty
     if (ign == "?") {
-        ign = nameByUser(msg);
+        ign = await nameByUser(msg);
         if (ign == undefined) {
             await msg.reply(util.formatSorryUnknown(msg));
             return;
         }
     }
 
-    // TODO refactor the update flow a bit
-    // trigger backend
-    if (await api.getPlayer(ign) == undefined)
-        await api.searchPlayer(ign);
-    else await api.updatePlayer(ign);
-
-    const waiter = api.subscribeUpdates(ign);
+    const waiter = await api.subscribeUpdates(ign, true);
     do {
-        const [player, data] = await Promise.all([
+        const [player, matches] = await Promise.all([
             api.getPlayer(ign),
             api.getMatches(ign)
         ]);
-        if (player == undefined) {
+        if (player == undefined || matches.length == 0) {
             response = await util.respond(msg,
                 "Loading your data…", response);
             continue;
         }
-        if (data == undefined || data[0].data.length == 0) {
-            response = await util.respond(msg,
-                "No match history for you yet", response);
-            continue;
-        }
-        const matches = data[0];
 
         const moreHelp = oneLine`
 *${emoji.symbols.information_source} or ${util.usg(msg, "vm " + ign)} for detail,
@@ -170,14 +159,15 @@ ${emoji.symbols["1234"]} or ${util.usg(msg, "vh " + ign)} for more*`
 
         const embed = util.vainsocialEmbed(`${ign} - ${player.shard_id}`, "player/" + ign, "vainsocial-user")
             .setThumbnail(ROOTURL + "images/game/skill_tiers/" +
-                matches.data[0].skill_tier + ".png")
+                matches[0].skill_tier + ".png")
             .setDescription("")
             .addField("Profile", await formatPlayer(player), true)
-            .addField("Last match", await formatMatch(matches.data[0]) + moreHelp, true)
-            .setTimestamp(new Date(matches.data[0].created_at));
+            .addField("Last match", await formatMatch(matches[0]) + moreHelp, true)
+            .setTimestamp(new Date(matches[0].created_at));
         response = await util.respond(msg, embed, response);
 
         if (!reactionsAdded) {
+            // build reaction buttton bar
             reactionsAdded = true;
             let reactionWaiter = util.awaitReactions(response,
                 [emoji.symbols.information_source, emoji.symbols["1234"]]);
@@ -187,7 +177,7 @@ ${emoji.symbols["1234"]} or ${util.usg(msg, "vh " + ign)} for more*`
                     if (rmoji == undefined) break;  // timeout
                     if (rmoji == emoji.symbols.information_source) {
                         util.trackAction(msg, "reaction-match", ign);
-                        await respondMatch(msg, ign, matches.data[0].match_api_id);
+                        await respondMatch(msg, ign, matches[0].match_api_id);
                     }
                     if (rmoji == emoji.symbols["1234"]) {
                         util.trackAction(msg, "reaction-matches", ign);
@@ -223,33 +213,22 @@ module.exports.showMatch = async (msg, args) => {
 
     // shorthand
     if (ign == "?") {
-        ign = nameByUser(msg);
+        ign = await nameByUser(msg);
         if (ign == undefined) {
             await msg.reply(util.formatSorryUnknown(msg));
             return;
         }
     }
 
-    // trigger backend
-    if (await api.getPlayer(ign) == undefined)
-        await api.searchPlayer(ign);
-    else await api.updatePlayer(ign);
-
-    const waiter = api.subscribeUpdates(ign);
+    const waiter = await api.subscribeUpdates(ign, true);
     do {
-        const data = await api.getMatches(ign);
-        if (data == undefined || data[0].data.length == 0) {
-            response = await util.respond(msg, "No matches for you yet",
+        const matches = await api.getMatches(ign);
+        if (index > matches.length) {
+            response = await util.respond(msg, "Not enough matches yet.",
                 response);
             continue;
         }
-        const matches = data[0];
-        if (index - 1 > matches.data.length) {
-            response = await util.respond(msg, "Not enough matches yet",
-                response);
-            continue;
-        }
-        let id = matches.data[index -1].match_api_id;
+        const id = matches[index - 1].match_api_id;
         response = await respondMatch(msg, ign, id, response);
         responded = true;
     } while (await waiter.next() != undefined);
@@ -264,10 +243,15 @@ async function respondMatches(msg, ign, response=undefined) {
         emoji.symbols.seven, emoji.symbols.eight, emoji.symbols.nine,
         emoji.symbols.ten
     ];
-    const data = await api.getMatches(ign),
-        matches = data[0].data.slice(0, MATCH_HISTORY_LEN),  // TODO
+    const match_data = await api.getMatches(ign),
+        matches = match_data.slice(0, MATCH_HISTORY_LEN),
         matches_num = matches.length;
 
+    // not enough data
+    if (matches_num == 0) return await util.respond(msg,
+        "No match history yet.", response);
+
+    // build embed
     let embed = util.vainsocialEmbed(ign, "player/" + ign, "vainsocial-matches")
         .setDescription(`
 Last ${matches_num} casual and ranked matches.
@@ -279,6 +263,7 @@ Last ${matches_num} casual and ranked matches.
     );
     response = await util.respond(msg, embed, response);
 
+    // reaction button bar
     const reactionWaiter = util.awaitReactions(response,
         count.slice(0, matches_num));
     (async () => {
@@ -301,27 +286,15 @@ module.exports.showMatches = async (msg, args) => {
 
     // shorthand
     if (ign == "?") {
-        ign = nameByUser(msg);
+        ign = await nameByUser(msg);
         if (ign == undefined) {
             await msg.reply(util.formatSorryUnknown(msg));
             return;
         }
     }
 
-    // trigger backend
-    if (await api.getPlayer(ign) == undefined)
-        await api.searchPlayer(ign);
-    else await api.updatePlayer(ign);
-
-    const waiter = api.subscribeUpdates(ign);
+    const waiter = await api.subscribeUpdates(ign, true);
     do {
-        const data = await api.getMatches(ign);
-        if (data == undefined || data[0].data.length == 0) {
-            response = await util.respond(msg, "No matches for you yet",
-                response);
-            continue;
-        }
-        const matches = data[0];
         response = await respondMatches(msg, ign, response);
         responded = true;
     } while (await waiter.next() != undefined);

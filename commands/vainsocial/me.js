@@ -4,10 +4,8 @@
 
 const Commando = require("discord.js-commando"),
     oneLine = require("common-tags").oneLine,
-    request = require("request-promise"),
+    api = require("../../api"),
     util = require("../../util");
-
-const API_FE_URL = process.env.API_FE_URL || "http://vainsocial.dev/bot/api";
 
 module.exports = class RegisterUserCommand extends Commando.Command {
     constructor(client) {
@@ -36,12 +34,9 @@ Store your in game name for quicker access to other commands and for Guild manag
     async run(msg, args) {
         const ign = args.name;
         util.trackAction(msg, "vainsocial-me", ign);
-        await request.post(API_FE_URL + "/user", {
-            forever: true,
-            form: {
-                name: ign,
-                user_token: msg.author.id
-            }
+        await api.post("/user", {
+            name: ign,
+            user_token: msg.author.id
         });
         await msg.reply(oneLine`
 You are now able to use ${util.usg(msg, "v")} to access your profile faster.

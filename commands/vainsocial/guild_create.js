@@ -4,10 +4,8 @@
 
 const Commando = require("discord.js-commando"),
     oneLine = require("common-tags").oneLine,
-    request = require("request-promise"),
+    api = require("../../api"),
     util = require("../../util");
-
-const API_FE_URL = process.env.API_FE_URL || "http://vainsocial.dev/bot/api";
 
 module.exports = class RegisterGuildCommand extends Commando.Command {
     constructor(client) {
@@ -49,15 +47,11 @@ Create a Guild with your VainSocial profile as leader.
     // register a VainSocial Guild to a Discord account
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-guild-create");
-        console.log(API_FE_URL + "/guild");
-        await request.post(API_FE_URL + "/guild", {
-            forever: true,
-            form: {
-                shard_id: args.region,
-                name: args.name,
-                identifier: args.tag,
-                user_token: msg.author.id
-            }
+        await api.post("/guild", {
+            shard_id: args.region,
+            name: args.name,
+            identifier: args.tag,
+            user_token: msg.author.id
         });
         await msg.reply(oneLine`
 You can now use ${util.usg(msg, "vgadd")} to add members to your Guild.
