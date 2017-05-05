@@ -99,8 +99,9 @@ module.exports.respond = async (msg, data, response) => {
             if (data != response.content)
                 await response.edit(data);
         } else {
-            if (new Date(response.embeds[0].createdTimestamp).getTime()
-                != data.timestamp.getTime())
+            if (response.embeds.length ==0 ||
+                new Date(response.embeds[0].createdTimestamp).getTime()
+                    != data.timestamp.getTime())
                 // TODO how2 edit embed properly?!
                 await msg.editResponse(response, {
                     type: "plain",

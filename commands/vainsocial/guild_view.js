@@ -34,7 +34,7 @@ Show a summary of your Guild.
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-guild-view");
         // get this user's guild
-        const guild = await api.get("/guild", { user_token: msg.author.id });
+        const guild = await api.getGuild(msg.author.id);
         if (guild == undefined) {
             await msg.reply("You are not registered in any guilds.");
             return;

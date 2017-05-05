@@ -62,10 +62,7 @@ Register IGNs to your Guild.
             }
 
             // all good, register to self guild
-            await api.post("/guild/members", {
-                user_token: msg.author.id,
-                member_name: user
-            });
+            await api.addToGuild(msg.author.id, user);
             await progress(`Added ${user}.`, true);
         });
         await progress(oneLine`

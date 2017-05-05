@@ -141,7 +141,8 @@ module.exports.showUser = async (msg, args) => {
         }
     }
 
-    const waiter = await api.subscribeUpdates(ign, true);
+    const waiter = api.subscribeUpdates(ign);
+    await api.upsearchPlayer(ign);
     do {
         const [player, matches] = await Promise.all([
             api.getPlayer(ign),
@@ -220,7 +221,8 @@ module.exports.showMatch = async (msg, args) => {
         }
     }
 
-    const waiter = await api.subscribeUpdates(ign, true);
+    const waiter = await api.subscribeUpdates(ign);
+    await api.upsearchPlayer(ign);
     do {
         const matches = await api.getMatches(ign);
         if (index > matches.length) {
@@ -293,7 +295,8 @@ module.exports.showMatches = async (msg, args) => {
         }
     }
 
-    const waiter = await api.subscribeUpdates(ign, true);
+    const waiter = await api.subscribeUpdates(ign);
+    await api.upsearchPlayer(ign);
     do {
         response = await respondMatches(msg, ign, response);
         responded = true;

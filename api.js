@@ -50,21 +50,21 @@ async function getFE(url, params={}, ttl=60, cachekey=undefined) {
                 forever: true
             });
         } catch (err) {
+            // TODO sort errors, loggly
             return undefined;
         }
     }, { ttl: ttl });
 }
 
-async function postFE(url, params={}) {
+// send a POST and optionally bust cache
+async function postFE(url, params={}, cachekey=undefined) {
+    if (cachekey) cache.del(cachekey);
     return await request.post(API_FE_URL + url, {
         form: params,
         json: true,
         forever: true
     });
 }
-
-module.exports.get = getFE;
-module.exports.post = postFE;
 
 function postBE(url) {
     return request.post({
@@ -73,6 +73,10 @@ function postBE(url) {
         forever: true
     });
 }
+
+module.exports.get = getFE;
+module.exports.post = postFE;
+module.exports.backend = postBE;
 
 function subscribe(topic, channel) {
     return notif.subscribe("/topic/" + topic, (msg) => {
@@ -118,16 +122,9 @@ module.exports.getGamers = async () =>
 
 // be an async iterator
 // next() returns promises that are awaited until there is an update
-module.exports.subscribeUpdates = async (name, refresh=true, timeout=UPDATE_TIMEOUT) => {
+module.exports.subscribeUpdates = (name, timeout=UPDATE_TIMEOUT) => {
     const channel = new Channel(),
         subscription = subscribe("player." + name, channel);
-
-    if (refresh) {
-        // trigger backend
-        if (await module.exports.getPlayer(name) == undefined)
-            await module.exports.searchPlayer(name);
-        else await module.exports.updatePlayer(name);
-    }
 
     // stop updates after timeout
     setTimeout(() => channel.close(), timeout*1000);
@@ -164,6 +161,13 @@ module.exports.updatePlayer = (name) =>
 module.exports.getPlayer = (name) =>
     getFE("/player/" + name, {}, 60, "player+" + name);
 
+// search or update a player
+module.exports.upsearchPlayer = async (name) => {
+    if (await module.exports.getPlayer(name) == undefined)
+        await module.exports.searchPlayer(name);
+    else await module.exports.updatePlayer(name);
+}
+
 // return matches
 module.exports.getMatches = async (name) => {
     const data = await getFE("/player/" + name + "/matches/2.3.1.1", {},
@@ -175,3 +179,35 @@ module.exports.getMatches = async (name) => {
 // return single match
 module.exports.getMatch = (id) =>
     getFE("/match/" + id, {}, 60 * 60);
+
+// return a guild
+module.exports.getGuild = (token) =>
+    getFE("/guild", { user_token: token }, 60, "guild+" + token);
+// TODO! cache guilds by guild id, not by user token
+
+// add user to guild
+module.exports.addToGuild = async (token, member) => {
+    const membership = await postFE("/guild/members", {
+        user_token: token,
+        member_name: member
+    }, "guild+" + token);
+    cache.del("guild+" + token);
+    return membership;
+}
+
+// recalc fame, block until timeout or points update
+module.exports.calculateGuild = async (id, token) => {
+    const channel = new Channel(),
+        subscription = subscribe("global", channel);
+    await module.exports.backend("/team/" + id + "/crunch");
+
+    // stop updates after timeout
+    setTimeout(() => channel.close(), UPDATE_TIMEOUT*1000);
+
+    let msg;
+    do msg = await channel.take();
+    while([Channel.DONE, "points_update"].indexOf(msg) == -1);
+
+    if (msg == "points_update") cache.del("guild+" + token);
+    subscription.unsubscribe();
+}
