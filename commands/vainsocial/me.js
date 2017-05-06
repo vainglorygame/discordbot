@@ -11,7 +11,7 @@ module.exports = class RegisterUserCommand extends Commando.Command {
     constructor(client) {
         super(client, {
             name: "vainsocial-me",
-            aliases: ["vme"],
+            aliases: ["vme", "vgme"],
             group: "vainsocial",
             memberName: "vainsocial-me",
             description: "Register a users's in game name.",
@@ -56,7 +56,7 @@ Store your in game name for quicker access to other commands and for Guild manag
         await api.setUser(msg.author.id, ign);
         await msg.reply(oneLine`
 You are now able to use ${util.usg(msg, "v")} to access your profile faster.
-You now have access to Guild management features.
+You now create a Guild with ${util.usg(msg, "vgcreate")}.
 `);
     }
 };
