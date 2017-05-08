@@ -4,7 +4,10 @@
 
 const Commando = require("discord.js-commando"),
     oneLine = require("common-tags").oneLine,
-    responses = require("../../responses");
+    util = require("../../util"),
+    api = require("../../api"),
+    strings = require("../../strings"),
+    MatchView = require("../../views/match");
 
 module.exports = class ShowMatchCommand extends Commando.Command {
     constructor(client) {
@@ -38,6 +41,20 @@ module.exports = class ShowMatchCommand extends Commando.Command {
         });
     }
     async run(msg, args) {
-        await responses.showMatch(msg, args);
+        util.trackAction(msg, "vainsocial-match", args.name);
+        const ign = await util.ignForUser(args.name, msg.author.id);
+        if (ign == undefined) return await msg.say(strings.unknown(msg));
+
+        const participations = await api.getMatches(ign);
+        if (args.number > participations.length)
+            return await msg.say(strings.tooFewMatches(ign));
+        const matchView = new MatchView(msg,
+            participations[args.number-1].match_api_id);
+        // wait for BE update
+        const waiter = api.subscribeUpdates(ign);
+        await api.upsearchPlayer(ign);
+
+        do await matchView.respond();
+        while (await waiter.next() != undefined);
     }
 };

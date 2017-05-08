@@ -17,7 +17,6 @@ const sqlite = require("sqlite"),
         invite: "https://discord.gg/txTchJY",
         unknownCommandResponse: false
     }),
-    responses = require("./responses"),
     util = require("./util");
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN,
@@ -46,7 +45,7 @@ client
     .on("debug", logger.info)
     .on("ready", () => {
         logger.info(`Client ready; logged in as ${client.user.username}#${client.user.discriminator} (${client.user.id})`);
-        responses.rotateGameStatus(client);
+        util.rotateGameStatus(client);
     })
     .on('disconnect', () => { logger.warn('Disconnected!'); })
     .on('reconnecting', () => { logger.warn('Reconnecting...'); })

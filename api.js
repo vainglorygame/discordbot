@@ -7,7 +7,9 @@ const request = require("request-promise"),
     WebSocket = require("ws"),
     webstomp = require("webstomp-client"),
     cacheManager = require("cache-manager"),
+    sleep = require("sleep-promise"),
     Channel = require("async-csp").Channel;
+const api = module.exports;
 
 let cache = cacheManager.caching({
     store: "memory",
@@ -16,7 +18,7 @@ let cache = cacheManager.caching({
 
 const UPDATE_TIMEOUT = parseInt(process.env.UPDATE_TIMEOUT) || 60;  // s
 
-const API_FE_URL = process.env.API_FE_URL || "http://vainsocial.dev/bot/api",
+const API_FE_URL = process.env.API_FE_URL || "http://vainsocial.bot/bot/api",
       API_MAP_URL = process.env.API_MAP_URL || "http://vainsocial.dev/masters/",
       API_WS_URL = process.env.API_WS_URL || "ws://vainsocial.dev/ws",
       API_BE_URL = process.env.API_BE_URL || "http://vainsocial.dev/bridge";
@@ -31,15 +33,15 @@ const notif = webstomp.over(new WebSocket(API_WS_URL,
     );
 })();
 
-function getMap(url) {
-    return request({
+module.exports.getMap = async (url) => {
+    return await request({
         uri: API_MAP_URL + url,
         json: true,
         forever: true
     });
 }
 
-async function getFE(url, params={}, ttl=60, cachekey=undefined) {
+module.exports.getFE = module.exports.get = async (url, params={}, ttl=60, cachekey=undefined) => {
     if (cachekey == undefined) cachekey = url + JSON.stringify(params);
     return await cache.wrap(cachekey, async () => {
         try {
@@ -57,7 +59,7 @@ async function getFE(url, params={}, ttl=60, cachekey=undefined) {
 }
 
 // send a POST and optionally bust cache
-async function postFE(url, params={}, cachekey=undefined) {
+module.exports.postFE = module.exports.post = async (url, params={}, cachekey=undefined) => {
     if (cachekey) cache.del(cachekey);
     return await request.post(API_FE_URL + url, {
         form: params,
@@ -66,34 +68,30 @@ async function postFE(url, params={}, cachekey=undefined) {
     });
 }
 
-function postBE(url) {
-    return request.post({
+module.exports.postBE = module.exports.backend = async (url) => {
+    return await request.post({
         uri: API_BE_URL + url,
         json: true,
         forever: true
     });
 }
 
-module.exports.get = getFE;
-module.exports.post = postFE;
-module.exports.backend = postBE;
-
 function subscribe(topic, channel) {
     return notif.subscribe("/topic/" + topic, (msg) => {
         channel.put(msg.body);
         msg.ack();
-    }, {"ack": "client"});
+    }, { ack: "client" });
 }
 
 // return id<->name mappings
-async function getMappings() {
+module.exports.getMappings = async () => {
     return await cache.wrap("mappings", async () => {
         let mapping = new Map();
         await Promise.all([
             Promise.map(
                 ["gamemode"], async (table) => {
                     mapping[table] = new Map();
-                    (await getMap(table)).map(
+                    (await api.getMap(table)).map(
                         (map) => mapping[table][map["id"]] = map["name"])
                 }
             ),
@@ -101,7 +99,7 @@ async function getMappings() {
             Promise.map(
                 ["hero"], async (table) => {
                     mapping[table] = new Map();
-                    (await getMap(table)).map(
+                    (await api.getMap(table)).map(
                         (map) => mapping[table][map["api_name"]] = map["name"])
                 }
             )
@@ -111,14 +109,14 @@ async function getMappings() {
 }
 
 module.exports.mapGameMode = async (id) =>
-    (await getMappings())["gamemode"][id];
+    (await api.getMappings())["gamemode"][id];
 
 module.exports.mapActor = async (api_name) =>
-    (await getMappings())["hero"][api_name];
+    (await api.getMappings())["hero"][api_name];
 
 // return a set of IGN of supporters
 module.exports.getGamers = async () =>
-    (await getFE("/gamer", {}, 60 * 30)).map((gamer) => gamer.name);
+    (await api.getFE("/gamer", {}, 60 * 30)).map((gamer) => gamer.name);
 
 // be an async iterator
 // next() returns promises that are awaited until there is an update
@@ -130,7 +128,7 @@ module.exports.subscribeUpdates = (name, timeout=UPDATE_TIMEOUT) => {
     setTimeout(() => channel.close(), timeout*1000);
 
     let msg;
-    return { next: async function () {
+    return { next: async () => {
         do msg = await channel.take();
         while([Channel.DONE, "search_fail", "search_success",
             "stats_update", "matches_update"].indexOf(msg) == -1);
@@ -151,38 +149,49 @@ module.exports.subscribeUpdates = (name, timeout=UPDATE_TIMEOUT) => {
 
 // search an unknown player
 module.exports.searchPlayer = (name) =>
-    postBE("/player/" + name + "/search");
+    api.postBE("/player/" + name + "/search");
 
 // update a known player
 module.exports.updatePlayer = (name) =>
-    postBE("/player/" + name + "/update");
+    api.postBE("/player/" + name + "/update");
 
 // return player
 module.exports.getPlayer = (name) =>
-    getFE("/player/" + name, {}, 60, "player+" + name);
+    api.getFE("/player/" + name, {}, 60, "player+" + name);
 
 // search or update a player
 module.exports.upsearchPlayer = async (name) => {
-    if (await module.exports.getPlayer(name) == undefined)
-        await module.exports.searchPlayer(name);
-    else await module.exports.updatePlayer(name);
+    if (await api.getPlayer(name) == undefined)
+        await api.searchPlayer(name);
+    else await api.updatePlayer(name);
+}
+
+// block until update is completely done
+module.exports.upsearchPlayerSync = async (name) => {
+    const waiter = await api.subscribeUpdates(name);
+    await api.upsearchPlayer(name);
+    let matchesUpdated = false, msg;
+    while (await Promise.any([
+        waiter.next(),
+        sleep(2000)
+    ]) != undefined);
 }
 
 // return matches
 module.exports.getMatches = async (name) => {
-    const data = await getFE("/player/" + name + "/matches/1.1.1.1", {},
+    const data = await api.getFE("/player/" + name + "/matches/1.1.1.1", {},
         60 * 60, "matches+" + name);
     if (data == undefined) return [];
     return data[0].data;
 }
 
 // return single match
-module.exports.getMatch = (id) =>
-    getFE("/match/" + id, {}, 60 * 60);
+module.exports.getMatch = async (id) =>
+    await api.getFE("/match/" + id, {}, 60 * 60);
 
 // return a guild
 module.exports.getGuild = (token) =>
-    getFE("/guild", { user_token: token }, 60, "guild+" + token);
+    api.getFE("/guild", { user_token: token }, 60, "guild+" + token);
 // TODO! cache guilds by guild id, not by user token
 
 // add user to guild
@@ -199,7 +208,7 @@ module.exports.addToGuild = async (token, member) => {
 module.exports.calculateGuild = async (id, token) => {
     const channel = new Channel(),
         subscription = subscribe("global", channel);
-    await module.exports.backend("/team/" + id + "/crunch");
+    await api.backend("/team/" + id + "/crunch");
 
     // stop updates after timeout
     setTimeout(() => channel.close(), UPDATE_TIMEOUT*1000);
@@ -215,7 +224,7 @@ module.exports.calculateGuild = async (id, token) => {
 // store Discord ID <-> IGN
 module.exports.setUser = async (token, name) => {
     cache.del("user+" + token);
-    await module.exports.post("/user", {
+    await api.post("/user", {
         name: name,
         user_token: token
     });
@@ -223,4 +232,4 @@ module.exports.setUser = async (token, name) => {
 
 // retrieve Discord ID -> IGN
 module.exports.getUser = async (token) =>
-    (await getFE("/user", { user_token: token }, 60, "user+" + token)).name;
+    (await api.getFE("/user", { user_token: token }, 60, "user+" + token)).name;

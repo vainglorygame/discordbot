@@ -4,8 +4,8 @@
 
 const Commando = require("discord.js-commando"),
     oneLine = require("common-tags").oneLine,
-    api = require("../../api"),
-    util = require("../../util");
+    util = require("../../util"),
+    GuildOverviewView = require("../../views/guild");
 
 module.exports = class ViewGuildCommand extends Commando.Command {
     constructor(client) {
@@ -33,18 +33,6 @@ Show a summary of your Guild.
     // show Guild details
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-guild-view");
-        // get this user's guild
-        const guild = await api.getGuild(msg.author.id);
-        if (guild == undefined) {
-            await msg.reply("You are not registered in any guilds.");
-            return;
-        }
-        // build response
-        let response = "";
-        response += `${guild.name} (${guild.shard_id})\n`;
-        guild.members.forEach((member) => {
-            response += `${member.player.name}: ${member.fame} VainSocial Fame\n`;
-        });
-        await msg.say(response);
+        await new GuildOverviewView(msg, msg.author.id).respond();
     }
 };

@@ -19,6 +19,7 @@
     "erlpack": "github:hammerandchisel/erlpack",
     "request": "^2.81.0",
     "request-promise": "^4.2.0",
+    "sleep-promise": "^2.0.0",
     "sqlite": "^2.5.0",
     "universal-analytics": "^0.4.13",
     "webstomp": "0.0.10",
