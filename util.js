@@ -142,6 +142,12 @@ module.exports.paginate = function* chunks(arr, pagesize) {
 }
 
 // return ign, or associated ign, or undefined
-module.exports.ignForUser = async (name, user_token) =>
+module.exports.ignForUser = async (name, user_token) => {
     // "?" is not accepted as user input, but the default for empty args
-    (name != "?")? name : await api.getUser(user_token);
+    if (name != "?") return name;
+    try {
+        return await api.getUser(user_token);
+    } catch (err) {
+        return undefined;
+    }
+}

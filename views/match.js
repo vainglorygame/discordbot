@@ -15,13 +15,8 @@ const MatchView = module.exports;
 
 // match detail view
 module.exports = class extends View {
-    constructor(msg, matchid) {
-        super(msg);
-        this.matchid = matchid;
-    }
-
     // return [[title, text], …] for rosters
-    static async text(match) {
+    async text(match) {
         let resps = [];
         for(let roster of match.rosters) {
             let winstr = "Won";
@@ -49,8 +44,8 @@ module.exports = class extends View {
         return embed;
     };
 
-    async respond() {
-        const match = await api.getMatch(this.matchid);
+    async respond(matchid) {
+        const match = await api.getMatch(matchid);
         this.response = await util.respond(this.msg,
             await this.embed(match), this.response);
         return this.response;

@@ -42,19 +42,27 @@ module.exports = class ShowMatchCommand extends Commando.Command {
     }
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-match", args.name);
-        const ign = await util.ignForUser(args.name, msg.author.id);
-        if (ign == undefined) return await msg.say(strings.unknown(msg));
+        let ign;
+        try {
+            ign = await util.ignForUser(args.name, msg.author.id);
+        } catch (err) {
+            return await new MatchView(msg, undefined).error(strings.unknown(msg));
+        }
 
-        const participations = await api.getMatches(ign);
-        if (args.number > participations.length)
-            return await msg.say(strings.tooFewMatches(ign));
-        const matchView = new MatchView(msg,
-            participations[args.number-1].match_api_id);
-        // wait for BE update
-        const waiter = api.subscribeUpdates(ign);
-        await api.upsearchPlayer(ign);
+        const matchView = new MatchView(msg);
+        try {
+            const participations = await api.getMatches(ign);
+            if (args.number > participations.length)
+                return await msg.say(strings.tooFewMatches(ign));
+            // wait for BE update
+            const waiter = api.subscribeUpdates(ign);
+            await api.upsearchPlayer(ign);
 
-        do await matchView.respond();
-        while (await waiter.next() != undefined);
+            do await matchView.respond(participations[args.number-1].match_api_id);
+            while (await waiter.next() != undefined);
+        } catch (err) {
+            console.error(err);
+            return await matchView.error(err.error.err);
+        }
     }
 };

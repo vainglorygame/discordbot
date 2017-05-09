@@ -7,7 +7,7 @@ const Commando = require("discord.js-commando"),
     Promise = require("bluebird"),
     api = require("../../api"),
     util = require("../../util"),
-    GuildAddView = require("../../views/guild_add");
+    GuildAddView = require("../../views/guild_progress");
 
 module.exports = class AddGuildMemberCommand extends Commando.Command {
     constructor(client) {
@@ -24,7 +24,6 @@ Register IGNs to your Guild.
             argsType: "multiple"
         });
     }
-    // register a VainSocial Guild to a Discord account
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-guild-add");
         let playersData = {};

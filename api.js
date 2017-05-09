@@ -43,19 +43,12 @@ module.exports.getMap = async (url) => {
 
 module.exports.getFE = module.exports.get = async (url, params={}, ttl=60, cachekey=undefined) => {
     if (cachekey == undefined) cachekey = url + JSON.stringify(params);
-    return await cache.wrap(cachekey, async () => {
-        try {
-            return await request({
-                uri: API_FE_URL + url,
-                qs: params,
-                json: true,
-                forever: true
-            });
-        } catch (err) {
-            // TODO sort errors, loggly
-            return undefined;
-        }
-    }, { ttl: ttl });
+    return await cache.wrap(cachekey, async () => await request({
+        uri: API_FE_URL + url,
+        qs: params,
+        json: true,
+        forever: true
+    }), { ttl: ttl });
 }
 
 // send a POST and optionally bust cache
@@ -139,7 +132,13 @@ module.exports.subscribeUpdates = (name, timeout=UPDATE_TIMEOUT) => {
             cache.del("matches+" + name);
             cache.del("player+" + name);
         }
-        if ([Channel.DONE, "search_fail"].indexOf(msg) != -1) {
+        if (msg == "search_fail") {
+            subscription.unsubscribe();
+            throw { error: {
+                err: "No player found for the provided IGN."
+            } };
+        }
+        if (msg == Channel.DONE) {
             subscription.unsubscribe();
             return undefined;
         }
@@ -156,14 +155,18 @@ module.exports.updatePlayer = (name) =>
     api.postBE("/player/" + name + "/update");
 
 // return player
-module.exports.getPlayer = (name) =>
-    api.getFE("/player/" + name, {}, 60, "player+" + name);
+module.exports.getPlayer = async (name) => {
+    return await api.getFE("/player/" + name, {}, 60, "player+" + name);
+}
 
 // search or update a player
 module.exports.upsearchPlayer = async (name) => {
-    if (await api.getPlayer(name) == undefined)
+    try {
+        await api.getPlayer(name);
+        await api.updatePlayer(name);
+    } catch (err) {
         await api.searchPlayer(name);
-    else await api.updatePlayer(name);
+    }
 }
 
 // block until update is completely done
@@ -181,17 +184,18 @@ module.exports.upsearchPlayerSync = async (name) => {
 module.exports.getMatches = async (name) => {
     const data = await api.getFE("/player/" + name + "/matches/1.1.1.1", {},
         60 * 60, "matches+" + name);
-    if (data == undefined) return [];
     return data[0].data;
 }
 
 // return single match
-module.exports.getMatch = async (id) =>
-    await api.getFE("/match/" + id, {}, 60 * 60);
+module.exports.getMatch = async (id) => {
+    return await api.getFE("/match/" + id, {}, 60 * 60);
+}
 
 // return a guild
-module.exports.getGuild = (token) =>
-    api.getFE("/guild", { user_token: token }, 60, "guild+" + token);
+module.exports.getGuild = async (token) => {
+    return await api.getFE("/guild", { user_token: token }, 60, "guild+" + token);
+}
 // TODO! cache guilds by guild id, not by user token
 
 // add user to guild
@@ -231,5 +235,7 @@ module.exports.setUser = async (token, name) => {
 }
 
 // retrieve Discord ID -> IGN
-module.exports.getUser = async (token) =>
-    (await api.getFE("/user", { user_token: token }, 60, "user+" + token)).name;
+module.exports.getUser = async (token) => {
+    const user = await api.getFE("/user", { user_token: token }, 60, "user+" + token);
+    return user.name;
+}

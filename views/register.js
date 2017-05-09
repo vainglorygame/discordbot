@@ -2,7 +2,8 @@
 /* jshint esnext:true */
 "use strict";
 
-const View = require("./view"),
+const emoji = require("discord-emoji"),
+    View = require("./view"),
     util = require("../util"),
     api = require("../api"),
     strings = require("../strings"),
@@ -12,6 +13,11 @@ const RegisterView = module.exports;
 
 // user register view
 module.exports = class extends View {
+    constructor(msg, ign) {
+        super(msg);
+        this.ign = ign;
+    }
+
     async text() {
         return `You are now registered at VainSocial, ${this.msg.author.mention}.`;
     }
@@ -22,18 +28,18 @@ module.exports = class extends View {
         let reactions = {};
         reactions[emoji.symbols.repeat] = async () => {
             util.trackAction(this.msg, "reaction-player");
-            const ign = await util.ignForUser(undefined, this.msg.author.id);
-            await new PlayerView(this.msg, ign).respond();
+            await new PlayerView(this.msg, this.ign).respond();
         };
         return reactions;
     }
     async respond() {
-        await api.setUser(msg.author.id, ign);
+        console.log("************************");
+        console.log(await this.text());
         this.response = await util.respond(this.msg,
             await this.text(), this.response);
         if (!this.hasButtons) {
             await util.reactionButtons(this.response,
-                await this.buttons(player, matches));
+                await this.buttons());
             this.hasButtons = true;
         }
         return this.response;

@@ -33,16 +33,24 @@ module.exports = class ShowMatchesCommand extends Commando.Command {
     }
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-matches", args.name);
-        const ign = await util.ignForUser(args.name, msg.author.id);
-        if (ign == undefined) return await strings.unknown(msg);
+        let ign;
+        try {
+            ign = await util.ignForUser(args.name, msg.author.id);
+        } catch (err) {
+            return await strings.unknown(msg);
+        }
 
-        // peek
         const matchesView = new MatchesView(msg, ign);
         // wait for BE update
-        const waiter = api.subscribeUpdates(ign);
-        await api.upsearchPlayer(ign);
+        try {
+            const waiter = api.subscribeUpdates(ign);
+            await api.upsearchPlayer(ign);
 
-        do await matchesView.respond();
-        while (await waiter.next() != undefined);
+            do await matchesView.respond();
+            while (await waiter.next() != undefined);
+        } catch (err) {
+            console.log(err);
+            return await matchesView.error(err.error.err);
+        }
     }
 };

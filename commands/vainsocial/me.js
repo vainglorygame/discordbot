@@ -5,7 +5,8 @@
 const Commando = require("discord.js-commando"),
     oneLine = require("common-tags").oneLine,
     api = require("../../api"),
-    util = require("../../util");
+    util = require("../../util"),
+    RegisterView = require("../../views/register");
 
 module.exports = class RegisterUserCommand extends Commando.Command {
     constructor(client) {
@@ -33,8 +34,15 @@ Store your in game name for quicker access to other commands and for Guild manag
     // register a Discord account at VainSocial
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-me", args.name);
-        await api.upsearchPlayer(ign);
-        await api.subscribeUpdates(ign).next();
-        await new RegisterView(msg).respond();
+        const registerView = new RegisterView(msg, args.name);
+        await api.upsearchPlayer(args.name);
+        try {
+            await api.subscribeUpdates(args.name).next();
+            await api.setUser(msg.author.id, args.name);
+        } catch (err) {
+            console.log(err);
+            return await registerView.error(err.error.err);
+        }
+        await registerView.respond();
     }
 };

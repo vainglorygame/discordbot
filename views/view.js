@@ -33,7 +33,15 @@ module.exports = class {
         // reply with embed + buttons
         this.response = await util.respond(this.msg,
             await this.embed(), this.response);
-        await util.reactionButtons(this.response, await this.buttons(), this.msg);
+        if (!this.hasButtons) {
+            await util.reactionButtons(this.response, await this.buttons(), this.msg);
+            this.hasButtons = true;
+        }
+        return this.response;
+    }
+    async error(text) {
+        // reply with error
+        this.response = await util.respond(this.msg, text, this.response);
         return this.response;
     }
 };
