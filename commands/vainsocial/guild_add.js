@@ -33,7 +33,7 @@ Register IGNs to your Guild.
         await Promise.map(playersWaiters, async (waiter, idx) => {
             await api.upsearchPlayer(args[idx]);
             let success = false;
-            while (await waiter.next() != undefined) {
+            while (["stats_update", undefined].indexOf(await waiter.next())) {
                 playersData[args[idx]] = await api.getPlayer(args[idx]);
                 await guildAddView.respond();
                 success = true;

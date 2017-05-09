@@ -200,7 +200,7 @@ module.exports.getGuild = async (token) => {
 
 // add user to guild
 module.exports.addToGuild = async (token, member) => {
-    const membership = await postFE("/guild/members", {
+    const membership = await api.postFE("/guild/members", {
         user_token: token,
         member_name: member
     }, "guild+" + token);

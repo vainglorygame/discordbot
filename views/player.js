@@ -72,7 +72,7 @@ ${emoji.symbols["1234"]} or ${util.usg(this.msg, "vh " + this.ign)} for more*`;
         let reactions = {};
         reactions[emoji.symbols.information_source] = async () => {
             util.trackAction(this.msg, "reaction-match", player.name);
-            await new MatchView(this.msg, matches[0].match_api_id).respond();
+            await new MatchView(this.msg).respond(matches[0].match_api_id);
         };
         reactions[emoji.symbols["1234"]] = async () => {
             util.trackAction(this.msg, "reaction-matches", player.name);
@@ -82,16 +82,13 @@ ${emoji.symbols["1234"]} or ${util.usg(this.msg, "vh " + this.ign)} for more*`;
     }
 
     async respond() {
-        const [player, matches] = await Promise.all([
-            api.getPlayer(this.ign),
-            api.getMatches(this.ign)
-        ]);
-        if (player == undefined) {
-            this.response = await util.respond(this.msg,
-                strings.loading(this.ign), this.response);
-            return this.response;
-        }
-        if (matches.length == 0) {
+        let player, matches;
+        try {
+            [player, matches] = await Promise.all([
+                api.getPlayer(this.ign),
+                api.getMatches(this.ign)
+            ]);
+        } catch (err) {
             this.response = await util.respond(this.msg,
                 strings.loading(this.ign), this.response);
             return this.response;

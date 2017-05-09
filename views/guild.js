@@ -24,16 +24,11 @@ module.exports = class extends View {
             "", "vainsocial-guild-view")
             .setDescription(await this.text(guild.members));
         return embed;
-    };
+    }
 
-    async respond(guild) {
-        if (guild == undefined) {
-            this.response = await util.respond(this.msg,
-                strings.notRegistered, this.response);
-            return this.response;
-        }
+    async respond(guild, extra="") {
         this.response = await util.respond(this.msg,
             await this.embed(guild), this.response);
         return this.response;
-    };
+    }
 }

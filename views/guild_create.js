@@ -38,7 +38,7 @@ module.exports = class extends View {
     // TODO move to super class
     async respond() {
         this.response = await util.respond(this.msg,
-            await this.text(), this.response);
+            await this.text() + "\n" + await this.help(), this.response);
         if (!this.hasButtons) {
             await util.reactionButtons(this.response,
                 await this.buttons());

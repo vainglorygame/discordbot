@@ -39,8 +39,8 @@ Score | ${emojiScore} \`${Math.floor(100 * participant.stats.impact_score)}%\`
         const matchesPart = matches.slice(0, MATCH_HISTORY_LEN);
 
         // build embed
-        let embed = util.vainsocialEmbed(
-            this.ign, "player/" + this.ign, "vainsocial-matches")
+        let embed = util.vainsocialEmbed(this.ign,
+            "player/" + this.ign, "vainsocial-matches")
             .setDescription(`Last ${matchesPart.length} casual and ranked matches.\n`
                 + await this.help())
             .setTimestamp(new Date(matchesPart[0].created_at));
@@ -60,9 +60,8 @@ Score | ${emojiScore} \`${Math.floor(100 * participant.stats.impact_score)}%\`
         let reactions = {};
         matchesPart.forEach((m, idx) =>
             reactions[strings.emojiCount[idx]] = async () => {
-                console.log("react");
                 util.trackAction(this.msg, "reaction-match", m.match_api_id);
-                await new MatchView(this.msg, m.match_api_id).respond();
+                await new MatchView(this.msg).respond(m.match_api_id);
             });
         return reactions;
     }

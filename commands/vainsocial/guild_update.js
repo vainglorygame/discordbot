@@ -26,21 +26,42 @@ Update the match history for all your Guild members.
     // internal / premium: immediately call backend player refresh
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-guild-update");
+        // obj of ign: player
         let playersData = {};
-        const playersWaiters = args.map((name) => api.subscribeUpdates(name)),
-            guildUpdateView = new GuildMembersProgressView(msg, playersData);
+        // collect an array of IGNs
+        let names, guild;
+        const guildUpdateView = new GuildMembersProgressView(msg,
+            playersData);
+        try {
+            guild = await api.getGuild(msg.author.id);
+            names = guild.members.map((m) => m.player.name);
+        } catch (err) {
+            console.log(err);
+            return await guildUpdateView.error(err.error.err);
+        }
+        // update all the IGNs
+        const playersWaiters = names.map((name) => api.subscribeUpdates(name));
         // create waiter dict & data dict
         await Promise.map(playersWaiters, async (waiter, idx) => {
-            await api.updatePlayer(args[idx]);
+            await api.updatePlayer(names[idx]);
             let success = false;
-            while (await waiter.next() != undefined) {
-                playersData[args[idx]] = await api.getPlayer(args[idx]);
+            while (["stats_update", undefined].indexOf(await waiter.next())) {
+                try {
+                    playersData[names[idx]] = await api.getPlayer(names[idx]);
+                } catch (err) {
+                    playersData[names[idx]] = undefined;
+                }
                 await guildUpdateView.respond();
                 success = true;
             }
         });
         await guildUpdateView.respond("Your Guild's fame is being updated…");
-        await api.calculateGuild(guild.id, msg.author.id);
+        try {
+            await api.calculateGuild(guild.id, msg.author.id);
+        } catch (err) {
+            console.log(err);
+            await guildUpdateView.error(err.error.err);
+        }
         await guildUpdateView.respond("Your Guild was updated.");
     }
 };

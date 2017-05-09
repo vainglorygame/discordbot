@@ -37,7 +37,8 @@ Store your in game name for quicker access to other commands and for Guild manag
         const registerView = new RegisterView(msg, args.name);
         await api.upsearchPlayer(args.name);
         try {
-            await api.subscribeUpdates(args.name).next();
+            const waiter = api.subscribeUpdates(args.name);
+            while (await waiter.next() != "stats_update");
             await api.setUser(msg.author.id, args.name);
         } catch (err) {
             console.log(err);

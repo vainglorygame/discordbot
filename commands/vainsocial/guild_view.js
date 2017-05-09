@@ -5,6 +5,7 @@
 const Commando = require("discord.js-commando"),
     oneLine = require("common-tags").oneLine,
     util = require("../../util"),
+    api = require("../../api"),
     GuildOverviewView = require("../../views/guild");
 
 module.exports = class ViewGuildCommand extends Commando.Command {
@@ -38,6 +39,7 @@ Show a summary of your Guild.
             const guild = await api.getGuild(msg.author.id);
             await guildOverviewView.respond(guild);
         } catch (err) {
+            console.log(err);
             return await guildOverviewView.error(err.error.err);
         }
     }
