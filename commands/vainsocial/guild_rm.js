@@ -34,6 +34,7 @@ Remove an IGN from your Guild.
                 await guildRmView.respond();
             });
         } catch (err) {
+            console.error(err);
             return await guildRmView.error(err.error.err);
         }
         await guildRmView.respond("Your Guild members were removed.");
