@@ -42,7 +42,7 @@ Update the match history for all your Guild members.
         // update all the IGNs
         const playersWaiters = names.map((name) => api.subscribeUpdates(name));
         // create waiter dict & data dict
-        await Promise.map(playersWaiters, async (waiter, idx) => {
+        await Promise.each(playersWaiters, async (waiter, idx) => {
             await api.updatePlayer(names[idx]);
             let success = false;
             while (["stats_update", undefined].indexOf(await waiter.next())) {

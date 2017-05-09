@@ -61,6 +61,16 @@ module.exports.postFE = module.exports.post = async (url, params={}, cachekey=un
     });
 }
 
+// send a DELETE and optionally bust cache
+module.exports.deleteFE = module.exports.post = async (url, params={}, cachekey=undefined) => {
+    if (cachekey) cache.del(cachekey);
+    return await request.delete(API_FE_URL + url, {
+        form: params,
+        json: true,
+        forever: true
+    });
+}
+
 module.exports.postBE = module.exports.backend = async (url) => {
     return await request.post({
         uri: API_BE_URL + url,
@@ -204,7 +214,14 @@ module.exports.addToGuild = async (token, member) => {
         user_token: token,
         member_name: member
     }, "guild+" + token);
-    cache.del("guild+" + token);
+    return membership;
+}
+
+// kick from guild
+module.exports.removeFromGuild = async (token, member) => {
+    const membership = await api.deleteFE("/guild/members/" + member, {
+        user_token: token
+    }, "guild+" + token);
     return membership;
 }
 

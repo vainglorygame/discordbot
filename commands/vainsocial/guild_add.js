@@ -30,17 +30,23 @@ Register IGNs to your Guild.
         const playersWaiters = args.map((name) => api.subscribeUpdates(name)),
             guildAddView = new GuildAddView(msg, playersData);
         // create waiter dict & data dict
-        await Promise.map(playersWaiters, async (waiter, idx) => {
+        await Promise.each(playersWaiters, async (waiter, idx) => {
             await api.upsearchPlayer(args[idx]);
             let success = false;
-            while (["stats_update", undefined].indexOf(await waiter.next())) {
-                playersData[args[idx]] = await api.getPlayer(args[idx]);
+            while (["stats_update", "matches_update", undefined].indexOf(
+                await waiter.next())) {
+                try {
+                    playersData[args[idx]] = await api.getPlayer(args[idx]);
+                    success = true;
+                } catch (err) {
+                    playersData[args[idx]] = undefined;
+                }
                 await guildAddView.respond();
-                success = true;
             }
             if (success) {
                 await api.addToGuild(msg.author.id, args[idx]);
             }
         });
+        await guildAddView.respond("Your Guild members were added.");
     }
 };
