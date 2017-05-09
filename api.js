@@ -62,7 +62,7 @@ module.exports.postFE = module.exports.post = async (url, params={}, cachekey=un
 }
 
 // send a DELETE and optionally bust cache
-module.exports.deleteFE = module.exports.post = async (url, params={}, cachekey=undefined) => {
+module.exports.deleteFE = module.exports.delete = async (url, params={}, cachekey=undefined) => {
     if (cachekey) cache.del(cachekey);
     return await request.delete(API_FE_URL + url, {
         form: params,
