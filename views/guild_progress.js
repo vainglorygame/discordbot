@@ -16,13 +16,10 @@ module.exports = class extends View {
         this.players = players;
     }
 
-    // players: obj, key=ign, value=player
+    // players: obj, key=ign, value=progress
     async text(players) {
         return Object.entries(players).map((tuple) =>
-            (tuple[1] == undefined)?
-                `Loading ${tuple[0]}…`
-                : `Loaded ${tuple[0]}.`
-            ).join("\n");
+            `${tuple[0]}: ${tuple[1]}`).join("\n");
     }
 
     async respond(extra="") {

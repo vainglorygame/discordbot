@@ -26,12 +26,18 @@ Remove an IGN from your Guild.
     }
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-guild-rm");
-        let playersData = {};
-        const guildRmView = new GuildRmView(msg, playersData);
+        let playersStatus = {};
+        const guildRmView = new GuildRmView(msg, playersStatus);
         try {
             await Promise.each(args, async (name) => {
-                await api.removeFromGuild(msg.author.id, name);
-                await guildRmView.respond();
+                try {
+                    playersStatus[name] = "Removing…";
+                    await api.removeFromGuild(msg.author.id, name);
+                    playersStatus[name] = "Removed.";
+                    await guildRmView.respond();
+                } catch (err) {
+                    playersStatus[name] = err.error.err;
+                }
             });
         } catch (err) {
             console.error(err);

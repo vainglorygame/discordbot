@@ -27,11 +27,10 @@ Update the match history for all your Guild members.
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-guild-update");
         // obj of ign: player
-        let playersData = {};
+        let playersStatus = {};
         // collect an array of IGNs
         let names, guild;
-        const guildUpdateView = new GuildMembersProgressView(msg,
-            playersData);
+        const guildUpdateView = new GuildMembersProgressView(msg, playersStatus);
         try {
             guild = await api.getGuild(msg.author.id);
             names = guild.members.map((m) => m.player.name);
@@ -44,15 +43,14 @@ Update the match history for all your Guild members.
         // create waiter dict & data dict
         await Promise.each(playersWaiters, async (waiter, idx) => {
             await api.updatePlayer(names[idx]);
-            let success = false;
             while (["stats_update", undefined].indexOf(await waiter.next())) {
                 try {
-                    playersData[names[idx]] = await api.getPlayer(names[idx]);
+                    await api.getPlayer(names[idx]);
+                    playersStatus[names[idx]] = "Loaded.";
                 } catch (err) {
-                    playersData[names[idx]] = undefined;
+                    playersStatus[names[idx]] = "Loading…";
                 }
                 await guildUpdateView.respond();
-                success = true;
             }
         });
         await guildUpdateView.respond("Your Guild's fame is being updated…");

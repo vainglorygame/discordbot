@@ -26,25 +26,31 @@ Register IGNs to your Guild.
     }
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-guild-add");
-        let playersData = {};
+        let playersStatus = {};
         const playersWaiters = args.map((name) => api.subscribeUpdates(name)),
-            guildAddView = new GuildAddView(msg, playersData);
+            guildAddView = new GuildAddView(msg, playersStatus);
         // create waiter dict & data dict
         await Promise.each(playersWaiters, async (waiter, idx) => {
             await api.upsearchPlayer(args[idx]);
             let success = false;
-            while (["stats_update", "matches_update", undefined].indexOf(
-                await waiter.next())) {
-                try {
-                    playersData[args[idx]] = await api.getPlayer(args[idx]);
-                    success = true;
-                } catch (err) {
-                    playersData[args[idx]] = undefined;
-                }
-                await guildAddView.respond();
+            try {
+                do {
+                    try {
+                        await api.getPlayer(args[idx]);
+                        playersStatus[args[idx]] = "Loading…";
+                        success = true;
+                    } catch (err) { }
+                    await guildAddView.respond();
+                } while (["stats_update", "matches_update", undefined]
+                    .indexOf(await waiter.next()));
+            } catch (err) {
+                console.error(err);
+                playersStatus[args[idx]] = err.error.err;
+                success = false;
             }
             if (success) {
                 await api.addToGuild(msg.author.id, args[idx]);
+                playersStatus[args[idx]] = "Loaded.";
             }
         });
         await guildAddView.respond("Your Guild members were added.");
