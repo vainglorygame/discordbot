@@ -2,7 +2,8 @@
 /* jshint esnext:true */
 "use strict";
 
-const View = require("./view"),
+const emoji = require("discord-emoji"),
+    View = require("./view"),
     util = require("../util"),
     api = require("../api"),
     strings = require("../strings"),
@@ -29,7 +30,7 @@ module.exports = class extends View {
         let reactions = {};
         reactions[emoji.symbols.information_source] = async () => {
             util.trackAction(this.msg, "reaction-guildview");
-            await new GuildOverviewView(this.user_token).respond();
+            await new GuildOverviewView(this.msg).respond(this.user_token);
         };
         return reactions;
     }

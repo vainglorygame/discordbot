@@ -12,11 +12,6 @@ const GuildOverviewView = module.exports;
 
 // match detail view
 module.exports = class extends View {
-    constructor(msg, user_token) {
-        super(msg);
-        this.user_token = user_token;
-    }
-
     async text(members) {
         // TODO remove when API supports order by fame
         members = members.sort((m1, m2) => m1.fame < m2.fame);
@@ -31,8 +26,7 @@ module.exports = class extends View {
         return embed;
     };
 
-    async respond() {
-        const guild = await api.getGuild(this.user_token);
+    async respond(guild) {
         if (guild == undefined) {
             this.response = await util.respond(this.msg,
                 strings.notRegistered, this.response);

@@ -33,6 +33,12 @@ Show a summary of your Guild.
     // show Guild details
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-guild-view");
-        await new GuildOverviewView(msg, msg.author.id).respond();
+        const guildOverviewView = new GuildOverviewView(msg);
+        try {
+            const guild = await api.getGuild(msg.author.id);
+            await guildOverviewView.respond(guild);
+        } catch (err) {
+            return await guildOverviewView.error(err.error.err);
+        }
     }
 };

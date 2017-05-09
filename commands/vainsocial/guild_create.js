@@ -48,13 +48,18 @@ Create a Guild with your VainSocial profile as leader.
     // register a VainSocial Guild to a Discord account
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-guild-create");
-        // TODO error handling
-        await api.post("/guild", {
-            shard_id: args.region,
-            name: args.name,
-            identifier: args.tag,
-            user_token: msg.author.id
-        });
-        await new GuildCreateView(msg, msg.author.id).respond();
+        const guildCreateView = new GuildCreateView(msg, msg.author.id);
+        try {
+            await api.post("/guild", {
+                shard_id: args.region,
+                name: args.name,
+                identifier: args.tag,
+                user_token: msg.author.id
+            });
+        } catch (err) {
+            console.error(err);
+            return await guildCreateView.error(err.error.err);
+        }
+        await guildCreateView.respond();
     }
 };
