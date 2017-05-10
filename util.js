@@ -23,7 +23,7 @@ module.exports.vainsocialEmbed = (title, link, command) => {
     return new Discord.RichEmbed()
         .setTitle(title)
         .setColor("#55ADD3")
-        .setURL(ROOTURL + link + util.track(command))
+        .setURL(ROOTURL + encodeURIComponent(link) + util.track(command))
         .setAuthor("VainSocial" + (PREVIEW? " preview":""), ROOTURL + "images/brands/logo-blue.png",
             ROOTURL + util.track(command))
         .setFooter("VainSocial" + (PREVIEW? " preview":""), ROOTURL + "images/brands/logo-blue.png")
