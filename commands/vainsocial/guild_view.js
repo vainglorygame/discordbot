@@ -26,7 +26,7 @@ Show a summary of your Guild.
                 label: "name",
                 prompt: "Please specify your Guild's name.",
                 type: "string",
-                min: 3,
+                min: 2,
                 default: "?"
             } ]
         });

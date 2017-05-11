@@ -32,7 +32,7 @@ Create a Guild with your VainSocial profile as leader.
                 label: "tag",
                 prompt: "Please specify your Guild's tag.",
                 type: "string",
-                min: 3,
+                min: 2,
                 max: 4
             }, {
                 // TODO use enum
