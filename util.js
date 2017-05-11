@@ -55,8 +55,8 @@ module.exports.trackAction = (msg, action, ign="") => {
     user.pageview({
         documentPath: action,
         documentTitle: ign,
-        campaignSource: msg.guild.id,
-        campaignMedium: msg.guild.name
+        campaignSource: (msg.guild? msg.guild.id : 0),
+        campaignMedium: (msg.guild? msg.guild.name : "private")
     }).send();
 };
 
