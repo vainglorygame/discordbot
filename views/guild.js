@@ -3,20 +3,21 @@
 "use strict";
 
 const View = require("./view"),
+    GuildMemberView = require("./guild_member"),
     util = require("../util"),
     api = require("../api"),
     strings = require("../strings"),
+    Promise = require("bluebird"),
     oneLine = require("common-tags").oneLine;
 
 const GuildOverviewView = module.exports;
 
 // match detail view
 module.exports = class extends View {
-    async text(members) {
+    text(members) {
         // TODO remove when API supports order by fame
         members.sort((m1, m2) => m1.fame < m2.fame);
-        return members.map((member) =>
-            `${member.player.name} *${member.status}* ${member.fame}`).join("\n");
+        return members.map((m) => new GuildMemberView().text(m)).join("\n");
     }
 
     async embed(guild) {
