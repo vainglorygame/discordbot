@@ -14,9 +14,9 @@ const GuildOverviewView = module.exports;
 module.exports = class extends View {
     async text(members) {
         // TODO remove when API supports order by fame
-        members = members.sort((m1, m2) => m1.fame < m2.fame);
+        members.sort((m1, m2) => m1.fame < m2.fame);
         return members.map((member) =>
-            `${member.player.name} ${member.fame}`).join("\n");
+            `${member.player.name} *${member.status}* ${member.fame}`).join("\n");
     }
 
     async embed(guild) {

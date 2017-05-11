@@ -71,6 +71,16 @@ module.exports.deleteFE = module.exports.delete = async (url, params={}, cacheke
     });
 }
 
+// send a PUT and optionally bust cache
+module.exports.putFE = module.exports.put = async (url, params={}, cachekey=undefined) => {
+    if (cachekey) cache.del(cachekey);
+    return await request.put(API_FE_URL + url, {
+        form: params,
+        json: true,
+        forever: true
+    });
+}
+
 module.exports.postBE = module.exports.backend = async (url) => {
     return await request.post({
         uri: API_BE_URL + url,
@@ -221,6 +231,16 @@ module.exports.addToGuild = async (token, member) => {
 module.exports.removeFromGuild = async (token, member) => {
     const membership = await api.deleteFE("/guild/members/" + member, {
         user_token: token
+    }, "guild+" + token);
+    return membership;
+}
+
+// change a role
+module.exports.changeRole = async (token, member, role) => {
+    const membership = await api.putFE("/guild/members/updateRole", {
+        user_token: token,
+        member_name: member,
+        new_role: role
     }, "guild+" + token);
     return membership;
 }

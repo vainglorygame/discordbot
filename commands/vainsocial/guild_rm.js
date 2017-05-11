@@ -13,7 +13,7 @@ module.exports = class AddGuildMemberCommand extends Commando.Command {
     constructor(client) {
         super(client, {
             name: "vainsocial-guildrm",
-            aliases: ["vguild-rm", "vgrm", "vgr"],
+            aliases: ["vguild-rm", "vgrm"],
             group: "vainsocial-guild",
             memberName: "vainsocial-guildrm",
             description: "Remove a member from your Guild.",
