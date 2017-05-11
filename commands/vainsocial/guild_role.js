@@ -23,8 +23,7 @@ module.exports = class RoleGuildMemberCommand extends Commando.Command {
                 label: "name",
                 prompt: "Please specify a Guild member's name.",
                 type: "string",
-                min: 2,
-                default: "?"
+                min: 2
             }, {
                 key: "role",
                 label: "role",
