@@ -34,10 +34,10 @@ Register IGNs to your Guild.
             await api.upsearchPlayer(args[idx]);
             let success = false;
             try {
+                playersStatus[args[idx]] = "Loading…";
                 do {
                     try {
                         await api.getPlayer(args[idx]);
-                        playersStatus[args[idx]] = "Loading…";
                         success = true;
                     } catch (err) { }
                     await guildAddView.respond();
