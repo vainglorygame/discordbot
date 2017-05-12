@@ -19,7 +19,7 @@ module.exports = class extends View {
     }
 
     async text() {
-        return `You are now registered at VainSocial, @${this.msg.author.tag}.`;
+        return `You are now registered at VainSocial, ${this.msg.author.toString()}.`;
     }
     async help() {
         return `*${emoji.symbols.repeat} or ${util.usg(this.msg, "v")} to view your profile, ${util.usg(this.msg, "vgcreate")} to create a Guild*`
