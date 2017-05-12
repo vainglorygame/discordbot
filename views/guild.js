@@ -15,9 +15,9 @@ const GuildOverviewView = module.exports;
 // match detail view
 module.exports = class extends View {
     text(members) {
-        // TODO remove when API supports order by fame
-        members.sort((m1, m2) => m1.fame < m2.fame);
-        return members.map((m) => new GuildMemberView().text(m)).join("\n");
+        // TODO remove when API supports server side sort
+        return members.sort((m1, m2) => m1.fame < m2.fame).map((m) =>
+            new GuildMemberView().text(m)).join("\n");
     }
 
     async embed(guild) {
