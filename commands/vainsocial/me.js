@@ -35,10 +35,8 @@ Store your in game name for quicker access to other commands and for Guild manag
     async run(msg, args) {
         util.trackAction(msg, "vainsocial-me", args.name);
         const registerView = new RegisterView(msg, args.name);
-        await api.upsearchPlayer(args.name);
         try {
-            const waiter = api.subscribeUpdates(args.name);
-            while (await waiter.next() != "stats_update");
+            await api.upsearchPlayerSync(args.name);
             await api.setUser(msg.author.id, args.name);
         } catch (err) {
             console.log(err);

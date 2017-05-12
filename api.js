@@ -170,6 +170,7 @@ module.exports.subscribeUpdates = (name, timeout=UPDATE_TIMEOUT) => {
             } };
         }
         if (msg == Channel.DONE) {
+            subscribed = false;
             subscription.unsubscribe();
             return undefined;
         }

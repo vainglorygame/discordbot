@@ -4,6 +4,7 @@
 
 const emoji = require("discord-emoji"),
     View = require("./view"),
+    PlayerView = require("./player"),
     util = require("../util"),
     api = require("../api"),
     strings = require("../strings"),
