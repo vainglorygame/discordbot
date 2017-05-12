@@ -226,6 +226,12 @@ module.exports.getMatch = async (id) => {
 module.exports.getGuild = async (token) => {
     return await api.getFE("/guild", { user_token: token }, 60, "guild+" + token);
 }
+
+// return a guild
+module.exports.getGuildMembersByGuildName = async (name) => {
+    // TODO caching
+    return await api.getFE("/guild/" + name + "/members", { }, 0);
+}
 // TODO! cache guilds by guild id, not by user token
 
 // add user to guild
