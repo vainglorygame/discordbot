@@ -136,40 +136,45 @@ module.exports.getGamers = async () =>
 module.exports.subscribeUpdates = (name, timeout=UPDATE_TIMEOUT) => {
     const channel = new Channel(),
         subscription = subscribe("player." + name, channel);
+    let subscribed = true;
 
-    // stop updates after timeout
-    setTimeout(() => {
+    function stop() {
+        if (!subscribed) return;
+        subscribed = false;
         channel.close();
         subscription.unsubscribe();
-    }, timeout*1000);
+        clearTimeout(timer);
+    }
 
-    let msg;
+    // stop updates after timeout
+    const timer = setTimeout(() => stop(), timeout*1000);
+
     return { next: async () => {
+        let msg;
         do msg = await channel.take();
         while([Channel.DONE, "search_fail", "search_success",
-            "stats_update", "matches_update"].indexOf(msg) == -1);
+            "stats_update", "matches_update", "matches_none"]
+            .indexOf(msg) == -1);
         // bust caches
-        if (["stats_update"].indexOf(msg) != -1)
+        if (msg == "stats_update")
             cache.del("player+" + name);
-        if (["matches_update"].indexOf(msg) != -1) {
+        if (msg == "matches_update") {
             cache.del("matches+" + name);
             cache.del("player+" + name);
         }
+        if (msg == "matches_none") stop();  // no new data
         if (msg == "search_fail") {
-            subscription.unsubscribe();
-            channel.close();
+            stop();
             throw { error: {
                 err: "No player found for the provided IGN."
             } };
         }
         if (msg == Channel.DONE) {
             subscription.unsubscribe();
-            channel.close();
             return undefined;
         }
         return msg;
-    }, stop: async () => channel.close();
-    };
+    }, stop: stop };
 }
 
 // search an unknown player
@@ -196,15 +201,12 @@ module.exports.upsearchPlayer = async (name) => {
 }
 
 // block until update is completely done
-// TODO implement & use
 module.exports.upsearchPlayerSync = async (name) => {
     const waiter = await api.subscribeUpdates(name);
     await api.upsearchPlayer(name);
-    let matchesUpdated = false, msg;
-    while (await Promise.any([
-        waiter.next(),
-        sleep(2000)
-    ]) != undefined);
+    while ([undefined, "matches_update", "matches_none"]
+        .indexOf(await waiter.next()) == -1);
+    waiter.stop();
 }
 
 // return matches
