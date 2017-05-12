@@ -16,7 +16,7 @@ let cache = cacheManager.caching({
     ttl: 10  // s
 });
 
-const UPDATE_TIMEOUT = parseInt(process.env.UPDATE_TIMEOUT) || 60;  // s
+const UPDATE_TIMEOUT = parseInt(process.env.UPDATE_TIMEOUT) || 30;  // s
 
 const API_FE_URL = process.env.API_FE_URL || "http://vainsocial.bot/bot/api",
       API_MAP_URL = process.env.API_MAP_URL || "http://vainsocial.dev/masters/",
@@ -138,7 +138,10 @@ module.exports.subscribeUpdates = (name, timeout=UPDATE_TIMEOUT) => {
         subscription = subscribe("player." + name, channel);
 
     // stop updates after timeout
-    setTimeout(() => channel.close(), timeout*1000);
+    setTimeout(() => {
+        channel.close();
+        subscription.unsubscribe();
+    }, timeout*1000);
 
     let msg;
     return { next: async () => {
@@ -154,16 +157,19 @@ module.exports.subscribeUpdates = (name, timeout=UPDATE_TIMEOUT) => {
         }
         if (msg == "search_fail") {
             subscription.unsubscribe();
+            channel.close();
             throw { error: {
                 err: "No player found for the provided IGN."
             } };
         }
         if (msg == Channel.DONE) {
             subscription.unsubscribe();
+            channel.close();
             return undefined;
         }
         return msg;
-    } };
+    }, stop: async () => channel.close();
+    };
 }
 
 // search an unknown player
