@@ -42,16 +42,11 @@ Update the match history for all your Guild members.
         const playersWaiters = names.map((name) => api.subscribeUpdates(name));
         // create waiter dict & data dict
         await Promise.each(playersWaiters, async (waiter, idx) => {
-            await api.updatePlayer(names[idx]);
-            while (["stats_update", undefined].indexOf(await waiter.next())) {
-                try {
-                    await api.getPlayer(names[idx]);
-                    playersStatus[names[idx]] = "Loaded.";
-                } catch (err) {
-                    playersStatus[names[idx]] = "Loading…";
-                }
-                await guildUpdateView.respond();
-            }
+            playersStatus[names[idx]] = "Loading…";
+            await guildUpdateView.respond();
+            await api.upsearchPlayerSync(names[idx]);
+            playersStatus[names[idx]] = "Loaded.";
+            await guildUpdateView.respond();
         });
         await guildUpdateView.respond("Your Guild's fame is being updated…");
         try {

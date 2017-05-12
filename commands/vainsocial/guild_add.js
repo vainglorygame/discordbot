@@ -31,18 +31,12 @@ Register IGNs to your Guild.
             guildAddView = new GuildAddView(msg, playersStatus);
         // create waiter dict & data dict
         await Promise.each(playersWaiters, async (waiter, idx) => {
-            await api.upsearchPlayer(args[idx]);
             let success = false;
             try {
                 playersStatus[args[idx]] = "Loading…";
-                do {
-                    try {
-                        await api.getPlayer(args[idx]);
-                        success = true;
-                    } catch (err) { }
-                    await guildAddView.respond();
-                } while (["stats_update", "matches_update", undefined]
-                    .indexOf(await waiter.next()));
+                await guildAddView.respond();
+                await api.upsearchPlayerSync(args[idx]);
+                success = true;
             } catch (err) {
                 console.error(err);
                 playersStatus[args[idx]] = err.error.err;
