@@ -190,6 +190,7 @@ module.exports.upsearchPlayer = async (name) => {
 }
 
 // block until update is completely done
+// TODO implement & use
 module.exports.upsearchPlayerSync = async (name) => {
     const waiter = await api.subscribeUpdates(name);
     await api.upsearchPlayer(name);
@@ -204,7 +205,7 @@ module.exports.upsearchPlayerSync = async (name) => {
 module.exports.getMatches = async (name) => {
     const data = await api.getFE("/player/" + name + "/matches/1.1.1.1", {},
         60 * 60, "matches+" + name);
-    return data[0].data;
+    return data.data;
 }
 
 // return single match
