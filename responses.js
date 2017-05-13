@@ -370,7 +370,7 @@ async function respondMatches(msg, ign, response=undefined) {
         emoji.symbols.ten
     ];
     const data = await api.getMatches(ign),
-        matches = data[0].data.slice(0, MATCH_HISTORY_LEN),  // TODO
+        matches = data.data.slice(0, MATCH_HISTORY_LEN),
         matches_num = matches.length;
 
     let embed = vainsocialEmbed(ign, "player/" + ign, "vainsocial-matches")
