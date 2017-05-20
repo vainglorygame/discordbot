@@ -6,6 +6,8 @@ const Commando = require("discord.js-commando"),
     oneLine = require("common-tags").oneLine,
     util = require("../../util");
 
+const ROOTURL = (PREVIEW? "https://preview.vainsocial.com/":"https://vainsocial.com/");
+
 module.exports = class ShowAboutCommand extends Commando.Command {
     constructor(client) {
         super(client, {
