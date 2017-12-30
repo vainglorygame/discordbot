@@ -1,0 +1,31 @@
+{
+  "name": "discordbot",
+  "version": "2.0.0",
+  "description": "",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "schneefux",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "async-csp": "^0.5.0",
+    "bluebird": "^3.5.0",
+    "bufferutil": "^2.0.0",
+    "cache-manager": "^2.4.0",
+    "discord-emoji": "^1.1.1",
+    "discord.js": "git+https://github.com/hydrabolt/discord.js.git",
+    "discord.js-commando": "git+https://github.com/Gawdl3y/discord.js-commando.git",
+    "erlpack": "github:hammerandchisel/erlpack",
+    "request": "^2.81.0",
+    "request-promise": "^4.2.0",
+    "sleep-promise": "^2.0.0",
+    "sqlite": "^2.5.0",
+    "universal-analytics": "^0.4.13",
+    "webstomp": "0.0.10",
+    "webstomp-client": "^1.0.6",
+    "winston": "^2.3.1",
+    "winston-loggly-bulk": "^1.4.2",
+    "ws": "^2.2.3"
+  }
+}
